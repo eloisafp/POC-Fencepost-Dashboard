@@ -1,0 +1,809 @@
+
+> fencepost-dashboard@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.111:3000
+- Environments: .env.local
+✓ Ready in 421ms
+
+ GET /page-content-generator 200 in 381ms (next.js: 173ms, application-code: 208ms)
+ GET /page-content-generator 200 in 47ms (next.js: 4ms, application-code: 43ms)
+ POST /api/generate-page 200 in 46s (next.js: 51ms, application-code: 46s)
+ POST /api/generate-docx 200 in 156ms (next.js: 81ms, application-code: 75ms)
+ POST /api/send-to-drive 200 in 915ms (next.js: 20ms, application-code: 895ms)
+ POST /api/generate-docx 200 in 48ms (next.js: 5ms, application-code: 43ms)
+ POST /api/send-to-drive 200 in 385ms (next.js: 2ms, application-code: 382ms)
+ POST /api/generate-docx 200 in 29ms (next.js: 3ms, application-code: 26ms)
+ POST /api/send-to-drive 200 in 980ms (next.js: 2ms, application-code: 978ms)
+✓ Compiled in 352ms
+ GET /page-content-generator 200 in 392ms (next.js: 345ms, application-code: 48ms)
+ GET /page-content-generator 200 in 97ms (next.js: 58ms, application-code: 38ms)
+ GET /page-content-generator 200 in 9ms (next.js: 3ms, application-code: 6ms)
+ GET /page-content-generator 200 in 16ms (next.js: 2ms, application-code: 14ms)
+ GET /page-content-generator 200 in 19ms (next.js: 5ms, application-code: 14ms)
+ GET /page-content-generator 200 in 128ms (next.js: 4ms, application-code: 124ms)
+⨯ ./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  [90m2 |[0m
+  [90m3 |[0m [36mimport[0m { useState, useEffect, useRef } [36mfrom[0m [32m'react'[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { createClient } [36mfrom[0m [32m'../lib/supabase'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m
+  [90m6 |[0m declare [36mconst[0m google: any
+  [90m7 |[0m [36mimport[0m { generateClientHTML } [36mfrom[0m [32m'./clientHtml'[0m
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-client] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+
+./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  [90m2 |[0m
+  [90m3 |[0m [36mimport[0m { useState, useEffect, useRef } [36mfrom[0m [32m'react'[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { createClient } [36mfrom[0m [32m'../lib/supabase'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m
+  [90m6 |[0m declare [36mconst[0m google: any
+  [90m7 |[0m [36mimport[0m { generateClientHTML } [36mfrom[0m [32m'./clientHtml'[0m
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-ssr] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+✓ Compiled in 172ms
+ GET /page-content-generator 500 in 1032ms (next.js: 904ms, application-code: 128ms)
+⨯ ./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  [90m2 |[0m
+  [90m3 |[0m [36mimport[0m { useState, useEffect, useRef } [36mfrom[0m [32m'react'[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { createClient } [36mfrom[0m [32m'../lib/supabase'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m
+  [90m6 |[0m declare [36mconst[0m google: any
+  [90m7 |[0m [36mimport[0m { generateClientHTML } [36mfrom[0m [32m'./clientHtml'[0m
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-client] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+
+./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  [90m2 |[0m
+  [90m3 |[0m [36mimport[0m { useState, useEffect, useRef } [36mfrom[0m [32m'react'[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { createClient } [36mfrom[0m [32m'../lib/supabase'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m
+  [90m6 |[0m declare [36mconst[0m google: any
+  [90m7 |[0m [36mimport[0m { generateClientHTML } [36mfrom[0m [32m'./clientHtml'[0m
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-ssr] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+ GET /page-content-generator 500 in 34ms (next.js: 11ms, application-code: 23ms)
+⨯ ./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  [90m2 |[0m
+  [90m3 |[0m [36mimport[0m { useState, useEffect, useRef } [36mfrom[0m [32m'react'[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { createClient } [36mfrom[0m [32m'../lib/supabase'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m
+  [90m6 |[0m declare [36mconst[0m google: any
+  [90m7 |[0m [36mimport[0m { generateClientHTML } [36mfrom[0m [32m'./clientHtml'[0m
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-client] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+
+./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  [90m2 |[0m
+  [90m3 |[0m [36mimport[0m { useState, useEffect, useRef } [36mfrom[0m [32m'react'[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { createClient } [36mfrom[0m [32m'../lib/supabase'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m
+  [90m6 |[0m declare [36mconst[0m google: any
+  [90m7 |[0m [36mimport[0m { generateClientHTML } [36mfrom[0m [32m'./clientHtml'[0m
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-ssr] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+ GET /page-content-generator 500 in 20ms (next.js: 9ms, application-code: 11ms)
+[browser] Uncaught Error: ./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  2 |
+  3 | import { useState, useEffect, useRef } from 'react'
+> 4 | import { createClient } from '../lib/supabase'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | declare const google: any
+  7 | import { generateClientHTML } from './clientHtml'
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-client] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./app/page-content-generator/page.tsx:4:1)
+    at <unknown> (Error: (./app/page-content-generator/page.tsx:4:1)
+⨯ ./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  [90m2 |[0m
+  [90m3 |[0m [36mimport[0m { useState, useEffect, useRef } [36mfrom[0m [32m'react'[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { createClient } [36mfrom[0m [32m'../lib/supabase'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m
+  [90m6 |[0m declare [36mconst[0m google: any
+  [90m7 |[0m [36mimport[0m { generateClientHTML } [36mfrom[0m [32m'./clientHtml'[0m
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-client] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+
+./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  [90m2 |[0m
+  [90m3 |[0m [36mimport[0m { useState, useEffect, useRef } [36mfrom[0m [32m'react'[0m
+[31m[1m>[0m [90m4 |[0m [36mimport[0m { createClient } [36mfrom[0m [32m'../lib/supabase'[0m
+  [90m  |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m5 |[0m
+  [90m6 |[0m declare [36mconst[0m google: any
+  [90m7 |[0m [36mimport[0m { generateClientHTML } [36mfrom[0m [32m'./clientHtml'[0m
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-ssr] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+ GET /page-content-generator 500 in 32ms (next.js: 24ms, application-code: 8ms)
+[browser] Uncaught Error: ./app/page-content-generator/page.tsx:4:1
+Export createClient doesn't exist in target module
+  2 |
+  3 | import { useState, useEffect, useRef } from 'react'
+> 4 | import { createClient } from '../lib/supabase'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 |
+  6 | declare const google: any
+  7 | import { generateClientHTML } from './clientHtml'
+
+The export createClient was not found in module [project]/app/lib/supabase.ts [app-client] (ecmascript).
+Did you mean to import supabase?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./app/page-content-generator/page.tsx:4:1)
+    at <unknown> (Error: (./app/page-content-generator/page.tsx:4:1)
+✓ Compiled in 69ms
+ GET /page-content-generator 200 in 181ms (next.js: 73ms, application-code: 107ms)
+ GET /page-content-generator 200 in 39ms (next.js: 2ms, application-code: 37ms)
+✓ Compiled in 84ms
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /page-content-generator 200 in 217ms (next.js: 74ms, application-code: 143ms)
+ POST /api/generate-page 200 in 18.4s (next.js: 28ms, application-code: 18.4s)
+ POST /api/generate-docx 200 in 145ms (next.js: 84ms, application-code: 61ms)
+ POST /api/send-to-drive 200 in 988ms (next.js: 16ms, application-code: 971ms)
+✓ Compiled in 59ms
+✓ Compiled in 64ms
+⨯ ./app/page-content-generator/page.tsx:115:10
+the name `parseBlocks` is defined multiple times
+  [90m113 |[0m [90m// ── Parser ─────────────────────────────────────────────────────────────────────[0m
+  [90m114 |[0m
+[31m[1m>[0m [90m115 |[0m [36mfunction[0m parseBlocks(content: string): [33mBlock[0m[] {
+  [90m    |[0m          [31m[1m^^^^^^^^^^^[0m
+  [90m116 |[0m   [36mconst[0m lines = content.split([32m'\n'[0m)
+  [90m117 |[0m   [36mconst[0m blocks: [33mBlock[0m[] = []
+  [90m118 |[0m   [36mlet[0m i = [35m0[0m
+
+Ecmascript file had an error
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+
+./app/page-content-generator/page.tsx:186:10
+the name `parseOutput` is defined multiple times
+  [90m184 |[0m }
+  [90m185 |[0m
+[31m[1m>[0m [90m186 |[0m [36mfunction[0m parseOutput(text: string) {
+  [90m    |[0m          [31m[1m^^^^^^^^^^^[0m
+  [90m187 |[0m   [36mconst[0m seoBlock    = text.match([35m/---SEO---\r?\n([\s\S]*?)(?:---PAGE---|$)/[0m)?.[[35m1[0m] ?? [32m''[0m
+  [90m188 |[0m   [36mconst[0m contentBlock = text.match([35m/---PAGE---\r?\n([\s\S]*?)(?:---END---|$)/[0m)?.[[35m1[0m]?.trimE...
+  [90m189 |[0m   [36mreturn[0m {
+
+Ecmascript file had an error
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+
+./app/page-content-generator/page.tsx:200:10
+the name `postProcessBlocks` is defined multiple times
+  [90m198 |[0m
+  [90m199 |[0m [90m// Auto-detect image followed by h2 → merge into twocol block[0m
+[31m[1m>[0m [90m200 |[0m [36mfunction[0m postProcessBlocks(blocks: [33mBlock[0m[]): [33mBlock[0m[] {
+  [90m    |[0m          [31m[1m^^^^^^^^^^^^^^^^^[0m
+  [90m201 |[0m   [36mconst[0m out: [33mBlock[0m[] = []
+  [90m202 |[0m   [36mlet[0m i = [35m0[0m
+  [90m203 |[0m   [36mwhile[0m (i < blocks.length) {
+
+Ecmascript file had an error
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+ GET /page-content-generator 500 in 35ms (next.js: 25ms, application-code: 9ms)
+⨯ ./app/page-content-generator/page.tsx:115:10
+the name `parseBlocks` is defined multiple times
+  [90m113 |[0m [90m// ── Parser ─────────────────────────────────────────────────────────────────────[0m
+  [90m114 |[0m
+[31m[1m>[0m [90m115 |[0m [36mfunction[0m parseBlocks(content: string): [33mBlock[0m[] {
+  [90m    |[0m          [31m[1m^^^^^^^^^^^[0m
+  [90m116 |[0m   [36mconst[0m lines = content.split([32m'\n'[0m)
+  [90m117 |[0m   [36mconst[0m blocks: [33mBlock[0m[] = []
+  [90m118 |[0m   [36mlet[0m i = [35m0[0m
+
+Ecmascript file had an error
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+
+./app/page-content-generator/page.tsx:186:10
+the name `parseOutput` is defined multiple times
+  [90m184 |[0m }
+  [90m185 |[0m
+[31m[1m>[0m [90m186 |[0m [36mfunction[0m parseOutput(text: string) {
+  [90m    |[0m          [31m[1m^^^^^^^^^^^[0m
+  [90m187 |[0m   [36mconst[0m seoBlock    = text.match([35m/---SEO---\r?\n([\s\S]*?)(?:---PAGE---|$)/[0m)?.[[35m1[0m] ?? [32m''[0m
+  [90m188 |[0m   [36mconst[0m contentBlock = text.match([35m/---PAGE---\r?\n([\s\S]*?)(?:---END---|$)/[0m)?.[[35m1[0m]?.trimE...
+  [90m189 |[0m   [36mreturn[0m {
+
+Ecmascript file had an error
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+
+./app/page-content-generator/page.tsx:200:10
+the name `postProcessBlocks` is defined multiple times
+  [90m198 |[0m
+  [90m199 |[0m [90m// Auto-detect image followed by h2 → merge into twocol block[0m
+[31m[1m>[0m [90m200 |[0m [36mfunction[0m postProcessBlocks(blocks: [33mBlock[0m[]): [33mBlock[0m[] {
+  [90m    |[0m          [31m[1m^^^^^^^^^^^^^^^^^[0m
+  [90m201 |[0m   [36mconst[0m out: [33mBlock[0m[] = []
+  [90m202 |[0m   [36mlet[0m i = [35m0[0m
+  [90m203 |[0m   [36mwhile[0m (i < blocks.length) {
+
+Ecmascript file had an error
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+ GET /page-content-generator 500 in 36ms (next.js: 11ms, application-code: 25ms)
+[browser] Uncaught Error: ./app/page-content-generator/page.tsx:115:10
+the name `parseBlocks` is defined multiple times
+  113 | // ── Parser ─────────────────────────────────────────────────────────────────────
+  114 |
+> 115 | function parseBlocks(content: string): Block[] {
+      |          ^^^^^^^^^^^
+  116 |   const lines = content.split('\n')
+  117 |   const blocks: Block[] = []
+  118 |   let i = 0
+
+Ecmascript file had an error
+
+Import traces:
+  Client Component Browser:
+    ./app/page-content-generator/page.tsx [Client Component Browser]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page-content-generator/page.tsx [Client Component SSR]
+    ./app/page-content-generator/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./app/page-content-generator/page.tsx:115:10)
+    at <unknown> (Error: (./app/page-content-generator/page.tsx:115:10)
+✓ Compiled in 70ms
+ GET /page-content-generator 200 in 56ms (next.js: 4ms, application-code: 53ms)
+✓ Compiled in 55ms
+ GET /page-content-generator 200 in 99ms (next.js: 71ms, application-code: 28ms)
+✓ Compiled in 54ms
+ GET /page-content-generator 200 in 98ms (next.js: 66ms, application-code: 33ms)
+✓ Compiled in 39ms
+ GET /page-content-generator 200 in 102ms (next.js: 71ms, application-code: 31ms)
+✓ Compiled in 40ms
+ GET /page-content-generator 200 in 107ms (next.js: 74ms, application-code: 32ms)
+✓ Compiled in 101ms
+ GET /page-content-generator 200 in 143ms (next.js: 72ms, application-code: 71ms)
+ GET /page-content-generator 200 in 37ms (next.js: 3ms, application-code: 35ms)
+ GET /page-content-generator 200 in 144ms (next.js: 3ms, application-code: 141ms)
+✓ Compiled in 31ms
+ GET /page-content-generator 200 in 110ms (next.js: 73ms, application-code: 37ms)
+✓ Compiled in 32ms
+ GET /page-content-generator 200 in 113ms (next.js: 71ms, application-code: 41ms)
+✓ Compiled in 41ms
+ GET /page-content-generator 200 in 106ms (next.js: 71ms, application-code: 36ms)
+✓ Compiled in 53ms
+ GET /page-content-generator 200 in 116ms (next.js: 85ms, application-code: 31ms)
+✓ Compiled in 42ms
+ GET /page-content-generator 200 in 137ms (next.js: 94ms, application-code: 43ms)
+ POST /api/generate-page 200 in 46s (next.js: 30ms, application-code: 46s)
+ POST /api/generate-docx 200 in 131ms (next.js: 67ms, application-code: 65ms)
+ POST /api/send-to-drive 200 in 392ms (next.js: 15ms, application-code: 377ms)
+ POST /api/generate-page 200 in 44s (next.js: 3ms, application-code: 44s)
+ POST /api/generate-docx 200 in 26ms (next.js: 1893µs, application-code: 24ms)
+ POST /api/send-to-drive 200 in 395ms (next.js: 1784µs, application-code: 393ms)
+ POST /api/generate-page 200 in 28.5s (next.js: 3ms, application-code: 28.5s)
+ POST /api/generate-docx 200 in 52ms (next.js: 6ms, application-code: 46ms)
+ POST /api/send-to-drive 200 in 1040ms (next.js: 1718µs, application-code: 1038ms)
+ POST /api/generate-page 200 in 27.3s (next.js: 4ms, application-code: 27.3s)
+ POST /api/generate-docx 200 in 27ms (next.js: 1799µs, application-code: 25ms)
+ POST /api/send-to-drive 200 in 557ms (next.js: 1517µs, application-code: 555ms)
+ POST /api/generate-page 200 in 27.8s (next.js: 5ms, application-code: 27.8s)
+ POST /api/generate-docx 200 in 24ms (next.js: 1680µs, application-code: 23ms)
+ POST /api/send-to-drive 200 in 878ms (next.js: 1708µs, application-code: 876ms)
+ POST /api/generate-page 200 in 28.3s (next.js: 1975µs, application-code: 28.3s)
+ POST /api/generate-docx 200 in 22ms (next.js: 1527µs, application-code: 20ms)
+ POST /api/send-to-drive 200 in 360ms (next.js: 1672µs, application-code: 358ms)
+ POST /api/generate-page 200 in 29.2s (next.js: 4ms, application-code: 29.2s)
+ POST /api/generate-docx 200 in 22ms (next.js: 1685µs, application-code: 21ms)
+ POST /api/send-to-drive 200 in 372ms (next.js: 1564µs, application-code: 370ms)
+✓ Compiled in 50ms
+ GET /page-content-generator 200 in 128ms (next.js: 88ms, application-code: 40ms)
+✓ Compiled in 71ms
+ GET /page-content-generator 200 in 107ms (next.js: 73ms, application-code: 34ms)
+✓ Compiled in 40ms
+ GET /page-content-generator 200 in 105ms (next.js: 75ms, application-code: 31ms)
+ POST /api/generate-page 200 in 28.9s (next.js: 25ms, application-code: 28.9s)
+ POST /api/generate-docx 200 in 142ms (next.js: 71ms, application-code: 71ms)
+ POST /api/send-to-drive 200 in 993ms (next.js: 15ms, application-code: 977ms)
+ POST /api/generate-page 200 in 27.3s (next.js: 1533µs, application-code: 27.2s)
+ POST /api/generate-docx 200 in 24ms (next.js: 1751µs, application-code: 22ms)
+ POST /api/send-to-drive 200 in 831ms (next.js: 1587µs, application-code: 830ms)
+ POST /api/generate-page 200 in 29.0s (next.js: 2ms, application-code: 29.0s)
+ POST /api/generate-docx 200 in 22ms (next.js: 1667µs, application-code: 20ms)
+ POST /api/send-to-drive 200 in 367ms (next.js: 3ms, application-code: 364ms)
+ GET /page-content-generator 200 in 167ms (next.js: 2ms, application-code: 165ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/page-cont..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <ClientSegmentRoot Component={function RootLayout} slots={{children:{...}}} ...>
+                        <RootLayout params={Promise}>
+                          <html lang="en">
+                            <body
+                              style={{margin:0,fontFamily:"Inter, sys..."}}
+-                             className="clickup-chrome-ext_installed"
+                            >
+                  ...
+ 
+ POST /api/generate-page 200 in 31.2s (next.js: 3ms, application-code: 31.2s)
+ POST /api/generate-docx 200 in 36ms (next.js: 1975µs, application-code: 34ms)
+ POST /api/send-to-drive 200 in 1042ms (next.js: 1636µs, application-code: 1040ms)
+ POST /api/generate-page 200 in 26.2s (next.js: 1888µs, application-code: 26.2s)
+ POST /api/generate-docx 200 in 29ms (next.js: 1682µs, application-code: 27ms)
+ POST /api/send-to-drive 200 in 835ms (next.js: 3ms, application-code: 832ms)
+ POST /api/generate-page 200 in 28.7s (next.js: 1912µs, application-code: 28.7s)
+ POST /api/generate-docx 200 in 22ms (next.js: 1509µs, application-code: 21ms)
+ POST /api/send-to-drive 200 in 334ms (next.js: 1631µs, application-code: 332ms)
+ POST /api/generate-page 200 in 28.6s (next.js: 2ms, application-code: 28.6s)
+ POST /api/generate-docx 200 in 24ms (next.js: 2ms, application-code: 22ms)
+ POST /api/send-to-drive 200 in 363ms (next.js: 1939µs, application-code: 361ms)
+ POST /api/generate-page 200 in 32.5s (next.js: 1984µs, application-code: 32.5s)
+ POST /api/generate-docx 200 in 25ms (next.js: 1766µs, application-code: 23ms)
+ POST /api/send-to-drive 200 in 977ms (next.js: 1567µs, application-code: 975ms)
+ POST /api/generate-page 200 in 26.0s (next.js: 3ms, application-code: 26.0s)
+ POST /api/generate-docx 200 in 21ms (next.js: 1543µs, application-code: 19ms)
+ POST /api/send-to-drive 200 in 863ms (next.js: 1826µs, application-code: 861ms)
+ POST /api/generate-page 200 in 32.0s (next.js: 2ms, application-code: 32.0s)
+ POST /api/generate-docx 200 in 40ms (next.js: 7ms, application-code: 33ms)
+ POST /api/send-to-drive 200 in 986ms (next.js: 2ms, application-code: 984ms)
+ POST /api/generate-page 200 in 26.8s (next.js: 3ms, application-code: 26.8s)
+ POST /api/generate-docx 200 in 27ms (next.js: 2ms, application-code: 25ms)
+ POST /api/send-to-drive 200 in 966ms (next.js: 1609µs, application-code: 965ms)
+✓ Compiled in 57ms
+ GET /page-content-generator 200 in 127ms (next.js: 88ms, application-code: 39ms)
+✓ Compiled in 40ms
+ GET /page-content-generator 200 in 100ms (next.js: 69ms, application-code: 31ms)
+✓ Compiled in 35ms
+ GET /page-content-generator 200 in 125ms (next.js: 90ms, application-code: 36ms)
+✓ Compiled in 35ms
+ GET /page-content-generator 200 in 99ms (next.js: 69ms, application-code: 31ms)
+✓ Compiled in 90ms
+ GET /page-content-generator 200 in 122ms (next.js: 90ms, application-code: 32ms)
+ POST /api/generate-page 200 in 48s (next.js: 42ms, application-code: 48s)
+ POST /api/generate-docx 200 in 146ms (next.js: 100ms, application-code: 46ms)
+ POST /api/send-to-drive 200 in 892ms (next.js: 19ms, application-code: 873ms)
+ GET /page-content-generator 200 in 152ms (next.js: 4ms, application-code: 148ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/page-cont..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <ClientSegmentRoot Component={function RootLayout} slots={{children:{...}}} ...>
+                        <RootLayout params={Promise}>
+                          <html lang="en">
+                            <body
+                              style={{margin:0,fontFamily:"Inter, sys..."}}
+-                             className="clickup-chrome-ext_installed"
+                            >
+                  ...
+ 
+ POST /api/generate-page 200 in 13.9s (next.js: 3ms, application-code: 13.9s)
+ POST /api/generate-docx 200 in 29ms (next.js: 1725µs, application-code: 27ms)
+ POST /api/send-to-drive 200 in 378ms (next.js: 1705µs, application-code: 376ms)
+ GET /page-content-generator 200 in 47ms (next.js: 4ms, application-code: 44ms)
+ GET /page-content-generator 200 in 39ms (next.js: 2ms, application-code: 37ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/page-cont..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <ClientSegmentRoot Component={function RootLayout} slots={{children:{...}}} ...>
+                        <RootLayout params={Promise}>
+                          <html lang="en">
+                            <body
+                              style={{margin:0,fontFamily:"Inter, sys..."}}
+-                             className="clickup-chrome-ext_installed"
+                            >
+                  ...
+ 
+ POST /api/generate-page 200 in 48s (next.js: 2ms, application-code: 48s)
+ POST /api/generate-docx 200 in 23ms (next.js: 1513µs, application-code: 22ms)
+ POST /api/send-to-drive 200 in 6.5s (next.js: 2ms, application-code: 6.5s)
+ GET /page-content-generator 200 in 91ms (next.js: 57ms, application-code: 34ms)
+✓ Compiled in 31ms
+ GET /page-content-generator 200 in 106ms (next.js: 73ms, application-code: 32ms)
+✓ Compiled in 39ms
+ GET /page-content-generator 200 in 101ms (next.js: 71ms, application-code: 29ms)
+✓ Compiled in 42ms
+ GET /page-content-generator 200 in 101ms (next.js: 71ms, application-code: 29ms)
+✓ Compiled in 34ms
+ GET /page-content-generator 200 in 109ms (next.js: 77ms, application-code: 32ms)
+✓ Compiled in 36ms
+ GET /page-content-generator 200 in 105ms (next.js: 71ms, application-code: 34ms)
+✓ Compiled in 61ms
+ GET /page-content-generator 200 in 101ms (next.js: 71ms, application-code: 30ms)
+ GET /page-content-generator 200 in 124ms (next.js: 3ms, application-code: 121ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/page-cont..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <ClientSegmentRoot Component={function RootLayout} slots={{children:{...}}} ...>
+                        <RootLayout params={Promise}>
+                          <html lang="en">
+                            <body
+                              style={{margin:0,fontFamily:"Inter, sys..."}}
+-                             className="clickup-chrome-ext_installed"
+                            >
+                  ...
+ 
+ POST /api/generate-page 200 in 44s (next.js: 22ms, application-code: 44s)
+ POST /api/generate-docx 200 in 141ms (next.js: 64ms, application-code: 77ms)
+[send-to-drive] Make response: https://drive.google.com/file/d/anyoneWithLink/view
+ POST /api/send-to-drive 200 in 5.7s (next.js: 26ms, application-code: 5.7s)
+✓ Compiled in 40ms
+ GET /page-content-generator 200 in 109ms (next.js: 75ms, application-code: 33ms)
+✓ Compiled in 34ms
+ GET /page-content-generator 200 in 105ms (next.js: 73ms, application-code: 33ms)
+ GET /page-content-generator 200 in 127ms (next.js: 2ms, application-code: 124ms)
+ POST /api/generate-page 200 in 49s (next.js: 21ms, application-code: 49s)
+ POST /api/generate-docx 200 in 110ms (next.js: 68ms, application-code: 43ms)
+[send-to-drive] Make response: https://drive.google.com/file/d/anyoneWithLink/view
+ POST /api/send-to-drive 200 in 5.6s (next.js: 14ms, application-code: 5.5s)
+ GET /page-content-generator 200 in 43ms (next.js: 3ms, application-code: 40ms)
+✓ Compiled in 29ms
+ GET /page-content-generator 200 in 101ms (next.js: 72ms, application-code: 29ms)
+ GET /page-content-generator 200 in 198ms (next.js: 4ms, application-code: 194ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/page-cont..." notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <ClientSegmentRoot Component={function RootLayout} slots={{children:{...}}} ...>
+                        <RootLayout params={Promise}>
+                          <html lang="en">
+                            <body
+                              style={{margin:0,fontFamily:"Inter, sys..."}}
+-                             className="clickup-chrome-ext_installed"
+                            >
+                  ...
+ 
+ POST /api/generate-page 200 in 14.0s (next.js: 25ms, application-code: 14.0s)
+ POST /api/generate-docx 200 in 144ms (next.js: 71ms, application-code: 73ms)
+[send-to-drive] Make response: {"docUrl": ""}
+ POST /api/send-to-drive 200 in 4.8s (next.js: 15ms, application-code: 4.8s)
+✓ Compiled in 57ms
+ GET /page-content-generator 200 in 144ms (next.js: 102ms, application-code: 42ms)
+ GET /page-content-generator 200 in 133ms (next.js: 4ms, application-code: 129ms)
+ POST /api/generate-page 200 in 48s (next.js: 26ms, application-code: 48s)
+ POST /api/generate-docx 200 in 138ms (next.js: 66ms, application-code: 72ms)
+[send-to-drive] Make response: {"docUrl": ""}
+ POST /api/send-to-drive 200 in 5.7s (next.js: 15ms, application-code: 5.6s)
+ GET /page-content-generator 200 in 43ms (next.js: 3ms, application-code: 40ms)
+ POST /api/generate-page 200 in 17.9s (next.js: 1867µs, application-code: 17.9s)
+ POST /api/generate-docx 200 in 19ms (next.js: 1591µs, application-code: 17ms)
+[send-to-drive] Make response: {"docUrl": "https://drive.google.com/file/d/16keUCA6wIGo37-VdctkVTvBDP0ZNPz8djt1KAvnbaO0/view"}
+ POST /api/send-to-drive 200 in 5.5s (next.js: 1412µs, application-code: 5.5s)
+✓ Compiled in 42ms
+ GET /page-content-generator 200 in 157ms (next.js: 116ms, application-code: 41ms)
+✓ Compiled in 57ms
+ GET /page-content-generator 200 in 112ms (next.js: 79ms, application-code: 34ms)
+✓ Compiled in 33ms
+ GET /page-content-generator 200 in 102ms (next.js: 70ms, application-code: 32ms)
+✓ Compiled in 30ms
+ GET /page-content-generator 200 in 101ms (next.js: 67ms, application-code: 33ms)
+✓ Compiled in 39ms
+ GET /page-content-generator 200 in 119ms (next.js: 88ms, application-code: 31ms)
+ GET /scorecard 200 in 78ms (next.js: 52ms, application-code: 25ms)
+ GET / 200 in 75ms (next.js: 46ms, application-code: 29ms)
+ GET /page-content-generator 200 in 19ms (next.js: 2ms, application-code: 16ms)
