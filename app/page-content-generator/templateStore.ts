@@ -6,7 +6,9 @@ export type ContentType =
   | 'steps'
   | 'faq'
   | 'cta'
+  | 'button'
   | 'table'
+  | 'html'
 
 // Configuration for one column inside a table section
 export interface CellDef {
@@ -15,11 +17,13 @@ export interface CellDef {
   count: number
   wordsEach: number
   notes: string
+  htmlCode?: string
 }
 
 export interface TemplateSection {
   id: string
-  heading: string       // H2 text for most types; caption for 'image'; label for 'table'
+  heading: string       // H2 text (fixed) or topic hint (when varyHeading is true)
+  varyHeading?: boolean // When true, AI writes its own H2 based on heading as a hint
   contentType: ContentType
   count: number
   wordsEach: number
@@ -28,6 +32,11 @@ export interface TemplateSection {
   leftCol?: CellDef
   rightCol?: CellDef
   leftWidth?: number    // Left column width % (default 45)
+  // HTML embed-only field:
+  htmlCode?: string
+  // CTA button-only fields:
+  ctaButtonText?: string
+  ctaButtonUrl?: string
 }
 
 export interface PageTemplate {
@@ -82,6 +91,27 @@ export const DEFAULT_SECTION_DEFS: SectionDef[] = [
   {
     heading: 'How the Process Works',
     contentType: 'steps', count: 4, wordsEach: 60, notes: '',
+  },
+  {
+    heading: 'Service Areas & Location',
+    contentType: 'table',
+    count: 1, wordsEach: 0, notes: '',
+    leftWidth: 45,
+    leftCol: {
+      contentType: 'bullets',
+      heading: 'Other {service} Service Areas Near {city}',
+      count: 6,
+      wordsEach: 0,
+      notes: 'List nearby cities or towns {company} serves for {service}. Each bullet is just the city/town name with a brief 3–5 word phrase.',
+    },
+    rightCol: {
+      contentType: 'html',
+      heading: '',
+      count: 1,
+      wordsEach: 0,
+      notes: '',
+      htmlCode: '<iframe src="https://maps.google.com/maps?q={city},+{state}&output=embed" width="100%" height="300" frameborder="0" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>',
+    },
   },
   {
     heading: 'Ready to Make Your {city} Home More Comfortable?',
@@ -156,14 +186,17 @@ function buildCellContent(
   const h    = applyVars(cell.heading, v)
   const note = applyVars(cell.notes,   v)
   const ns   = note ? ` ${note}` : ''
-  const wn   = cell.wordsEach > 0 ? ` ~${cell.wordsEach} words` : ''
+  const limit = cell.wordsEach > 0 ? cell.wordsEach : 0
+  const wl   = limit > 0 ? ` [HARD LIMIT: ${limit} words max — count every word, do not exceed]` : ''
 
   switch (cell.contentType) {
     case 'image':
       return `[IMAGE: ${h}]\n`
 
-    case 'paragraphs':
-      return `## ${h}\nWrite ${cell.count} paragraph${cell.count !== 1 ? 's' : ''}${wn ? `, ${wn.trim()} each` : ''}.${ns}\n`
+    case 'paragraphs': {
+      const each = limit > 0 ? ` Each paragraph: ${limit} words maximum. Count every word. Stop at ${limit}.` : ''
+      return `## ${h}\nWrite ${cell.count} paragraph${cell.count !== 1 ? 's' : ''}.${each}${ns}\n`
+    }
 
     case 'bullets':
       return `## ${h}\nExactly ${cell.count} bullet points using - .${ns}\n`
@@ -172,54 +205,133 @@ function buildCellContent(
       const subLine = subServices
         ? `Sub-services offered: ${subServices}.`
         : 'Auto-determine sub-service names relevant to the service.'
-      let out = `## ${h}\nIntro paragraph about complete range of options, ~40 words. ${subLine} Then ${cell.count} sub-sections:\n`
+      const subLimit = limit || 60
+      let out = `## ${h}\nIntro paragraph about complete range of options, 40 words max — do not exceed. ${subLine} Then ${cell.count} sub-sections:\n`
       for (let i = 1; i <= cell.count; i++) {
-        out += `\n### [Sub-service ${i}]\n~${cell.wordsEach || 60} word paragraph\n`
+        out += `\n### [Sub-service ${i}]\n${subLimit} words max — count every word, stop at ${subLimit}\n`
       }
       if (ns) out += ns + '\n'
       return out
     }
 
     case 'steps': {
-      let out = `## ${h}\nOne intro sentence. Then ${cell.count} steps in this format:\n`
+      const stepLimit = limit || 60
+      let out = `## ${h}\nOne intro sentence (15 words max). Then ${cell.count} steps in this format:\n`
       for (let i = 1; i <= cell.count; i++) {
-        out += `\n**Step ${i}: [Step Name]**\n~${cell.wordsEach || 60} word paragraph\n`
+        out += `\n**Step ${i}: [Step Name]**\n${stepLimit} words max — count every word, stop at ${stepLimit}\n`
       }
       if (ns) out += ns + '\n'
       return out
     }
 
     case 'faq':
-      return `## ${h}\nExactly ${cell.count} Q&As. Use **bold question** format, then a paragraph answer${wn} each.${ns}\n`
+      return `## ${h}\nExactly ${cell.count} Q&As. Use **bold question** format, then a paragraph answer${wl} each.${ns}\n`
 
     case 'cta':
       return `## ${h}\n1–2 sentences inviting them to call or fill out the form for a free evaluation.${ns}\n`
+
+    case 'html':
+      return cell.htmlCode?.trim() ? `${applyVars(cell.htmlCode.trim(), v)}\n` : ''
 
     default:
       return ''
   }
 }
 
+export function extractHtmlEmbeds(
+  sections: TemplateSection[],
+  v: { service: string; city: string; state: string; company: string }
+): string[] {
+  const embeds: string[] = []
+  for (const sec of sections) {
+    if (sec.contentType === 'html' && sec.htmlCode?.trim()) {
+      embeds.push(applyVars(sec.htmlCode.trim(), v))
+    } else if (sec.contentType === 'table') {
+      for (const col of [sec.leftCol, sec.rightCol]) {
+        if (col?.contentType === 'html' && col.htmlCode?.trim()) {
+          embeds.push(applyVars(col.htmlCode.trim(), v))
+        }
+      }
+    }
+  }
+  return embeds
+}
+
+export function applyHtmlEmbeds(text: string, embeds: string[]): string {
+  return text.replace(/\[HTML_EMBED_(\d+)\]/g, (_, i) => embeds[+i] ?? '')
+}
+
 export function buildPromptFromTemplate(
   sections: TemplateSection[],
   vars: { companyName: string; service: string; city: string; state: string; subServices?: string }
-): string {
+): { prompt: string; htmlEmbeds: string[] } {
   const v: Vars = { service: vars.service, city: vars.city, state: vars.state, company: vars.companyName }
+  const htmlEmbeds: string[] = []
+
+  function addEmbed(html: string): string {
+    const idx = htmlEmbeds.length
+    htmlEmbeds.push(applyVars(html, v))
+    return `[HTML_EMBED_${idx}]\n`
+  }
+
   let out = `# ${vars.service} in ${vars.city}, ${vars.state}\n`
 
   for (const sec of sections) {
     if (sec.contentType === 'table') {
       if (sec.leftCol && sec.rightCol) {
-        out += `\n[COL-LEFT]\n${buildCellContent(sec.leftCol, v, vars.subServices)}[COL-RIGHT]\n${buildCellContent(sec.rightCol, v, vars.subServices)}[COL-END]\n`
+        const colContent = (col: CellDef): string => {
+          if (col.contentType === 'html' && col.htmlCode?.trim()) {
+            // Map embeds: output an [IMAGE: ...] placeholder the AI reliably copies
+            if (/maps\.google\.com|google\.com\/maps/i.test(col.htmlCode)) {
+              return `[IMAGE: Google Maps embed — ${v.city}, ${v.state}]\n`
+            }
+            return addEmbed(col.htmlCode.trim())
+          }
+          return buildCellContent(col, v, vars.subServices)
+        }
+        out += `\n[COL-LEFT]\n${colContent(sec.leftCol)}[COL-RIGHT]\n${colContent(sec.rightCol)}[COL-END]\n`
       }
       continue
     }
 
+    if (sec.contentType === 'html') {
+      if (sec.htmlCode?.trim()) {
+        if (/maps\.google\.com|google\.com\/maps/i.test(sec.htmlCode)) {
+          out += `\n[IMAGE: Google Maps embed — ${v.city}, ${v.state}]\n`
+        } else {
+          out += `\n${addEmbed(sec.htmlCode.trim())}`
+        }
+      }
+      continue
+    }
+
+    if (sec.contentType === 'button') {
+      const btnText = sec.ctaButtonText?.trim() || 'Contact Us'
+      const btnUrl  = sec.ctaButtonUrl?.trim() || ''
+      out += `\n[BUTTON: ${applyVars(btnText, v)}${btnUrl ? ` | ${applyVars(btnUrl, v)}` : ''}]\n`
+      continue
+    }
+
+    if (sec.contentType === 'cta') {
+      const h  = sec.varyHeading
+        ? `[Write an original H2 heading — topic: ${applyVars(sec.heading, v)} — use fresh wording]`
+        : applyVars(sec.heading, v)
+      const ns = sec.notes ? ` ${applyVars(sec.notes, v)}` : ''
+      const btnText = sec.ctaButtonText?.trim()
+      const btnUrl  = sec.ctaButtonUrl?.trim()
+      const btnLine = btnText ? `\n[BUTTON: ${btnText}${btnUrl ? ` | ${btnUrl}` : ''}]` : ''
+      out += `\n## ${h}\n1–2 sentences inviting them to call or fill out the form for a free evaluation.${ns}${btnLine}\n`
+      continue
+    }
+
     // Non-table sections — delegate to the same helper
+    const resolvedHeading = sec.varyHeading
+      ? `[Write an original H2 heading — topic: ${applyVars(sec.heading, v)} — use fresh wording, do not repeat phrases used in other sections]`
+      : sec.heading
     out += '\n' + buildCellContent(
       {
-        contentType: sec.contentType as Exclude<ContentType, 'table'>,
-        heading: sec.heading,
+        contentType: sec.contentType as Exclude<ContentType, 'table' | 'html'>,
+        heading: resolvedHeading,
         count: sec.count,
         wordsEach: sec.wordsEach,
         notes: sec.notes,
@@ -229,7 +341,7 @@ export function buildPromptFromTemplate(
     )
   }
 
-  return out
+  return { prompt: out, htmlEmbeds }
 }
 
 // ── localStorage CRUD ─────────────────────────────────────────────────────────

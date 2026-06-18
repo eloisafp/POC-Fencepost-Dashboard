@@ -79,6 +79,22 @@ export function parseBlocks(content: string): Block[] {
       blocks.push({ type: 'image', caption }); i++
     } else if (/^\[.+\]$/.test(t)) {
       blocks.push({ type: 'cta', text: t.slice(1, -1) }); i++
+    } else if (t.startsWith('<')) {
+      // Raw HTML line (e.g. iframe embed) — collect any continuation lines
+      let html = t
+      while (
+        i + 1 < lines.length &&
+        lines[i + 1].trim() &&
+        !lines[i + 1].trim().startsWith('#') &&
+        !lines[i + 1].trim().startsWith('[') &&
+        !lines[i + 1].trim().startsWith('-') &&
+        !lines[i + 1].trim().startsWith('•') &&
+        !lines[i + 1].trim().startsWith('**')
+      ) {
+        i++
+        html += '\n' + lines[i].trim()
+      }
+      blocks.push({ type: 'image', caption: html }); i++
     } else {
       blocks.push({ type: 'paragraph', text: t }); i++
     }

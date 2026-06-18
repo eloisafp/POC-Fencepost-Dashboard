@@ -258,10 +258,13 @@ export async function POST(req: Request) {
         // ── Review banner ──────────────────────────────────────────────────
         new Paragraph({
           children: [
-            new TextRun({ text: 'Draft for Review', font: 'Arial', size: 18, bold: true, color: '18181B' }),
-            new TextRun({ text: `   ·   ${reviewDate}`, font: 'Arial', size: 18, color: '94A3B8' }),
+            new TextRun({ text: form.companyName.toUpperCase(), font: 'Arial', size: 28, bold: true, color: '18391A' }),
+            new TextRun({ text: ` - ${[form.service, form.city].filter(Boolean).join(' ')}`, font: 'Arial', size: 28, bold: true, color: '18391A' }),
+            new TextRun({ text: '  |  Page For Review  |  ', font: 'Arial', size: 28, color: '18391A' }),
+            new TextRun({ text: reviewDate, font: 'Arial', size: 28, color: '18391A' }),
           ],
           spacing: { after: 160 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E2E8F0', space: 4 } },
         }),
         ...seoMetaBlock(seo),
         new Paragraph({ children: [], spacing: { after: 320 } }),

@@ -31,16 +31,41 @@ function blockToHtml(block: Block, mapUrl: string): string {
       return `<p>${block.text}</p>`
     case 'list':
       return `<ul>${block.items.map(i => `<li>${i}</li>`).join('')}</ul>`
-    case 'cta':
+    case 'cta': {
+      if (block.text.startsWith('BUTTON:')) {
+        const raw      = block.text.slice('BUTTON:'.length).trim()
+        const pipeIdx  = raw.indexOf('|')
+        const btnText  = (pipeIdx >= 0 ? raw.slice(0, pipeIdx) : raw).trim() || 'Contact Us'
+        const btnUrl   = (pipeIdx >= 0 ? raw.slice(pipeIdx + 1) : '').trim() || '#'
+        return `<div class="cta-wrap"><a href="${btnUrl}" class="cta-btn" target="_blank" rel="noopener noreferrer">${btnText}</a></div>`
+      }
       return `<div class="cta-wrap"><a href="#" class="cta-btn">${block.text}</a></div>`
+    }
     case 'image': {
       if (block.caption.trim().startsWith('<')) {
-        return `<div class="html-embed">${block.caption}</div>`
+        const escaped = block.caption
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+        return `<div class="html-embed">${block.caption}</div>
+<div class="embed-code-block">
+  <div class="embed-code-label">Embed code</div>
+  <pre class="embed-code-pre"><code>${escaped}</code></pre>
+  <button class="embed-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.embed-code-block').querySelector('code').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>{this.textContent='Copy code'},2000)})">Copy code</button>
+</div>`
       }
       const isMap = /map|google|location|embed/i.test(block.caption)
       if (isMap && mapUrl) {
+        const iframeHtml = `<iframe src="${mapUrl}" width="100%" height="300" frameborder="0" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>`
+        const iframeEscaped = iframeHtml.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
         return `<div class="map-wrap">
-  <iframe src="${mapUrl}" width="100%" height="380" style="border:0;display:block" loading="lazy" allowfullscreen title="Location map"></iframe>
+  <iframe src="${mapUrl}" width="100%" height="300" style="border:0;display:block" loading="lazy" allowfullscreen title="Location map"></iframe>
+</div>
+<div class="embed-code-block">
+  <div class="embed-code-label">Embed code</div>
+  <pre class="embed-code-pre"><code>${iframeEscaped}</code></pre>
+  <button class="embed-copy-btn" onclick="navigator.clipboard.writeText(this.closest('.embed-code-block').querySelector('code').textContent).then(()=>{this.textContent='Copied!';setTimeout(()=>{this.textContent='Copy code'},2000)})">Copy code</button>
 </div>`
       }
       return `<div class="img-placeholder">
@@ -187,6 +212,12 @@ body{font-family:-apple-system,'Segoe UI',Inter,Helvetica,sans-serif;background:
 /* ── HTML embed ── */
 .html-embed{margin:16px 0;border-radius:12px;overflow:hidden}
 .html-embed iframe{display:block;width:100%}
+.embed-code-block{margin:8px 0 16px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden}
+.embed-code-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;padding:8px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+.embed-code-pre{margin:0;padding:10px 12px;background:#f8fafc;overflow-x:auto}
+.embed-code-pre code{font-family:'SFMono-Regular',Consolas,'Liberation Mono',Menlo,monospace;font-size:11px;color:#475569;white-space:pre-wrap;word-break:break-all}
+.embed-copy-btn{display:block;width:100%;padding:7px;font-size:11px;color:#64748b;background:#fff;border:none;border-top:1px solid #e2e8f0;cursor:pointer;transition:.15s}
+.embed-copy-btn:hover{background:#f1f5f9;color:#0f172a}
 
 /* ── Two-column layout ── */
 .two-col-table{width:100%;border-collapse:collapse;margin:20px 0}
@@ -289,7 +320,7 @@ body{font-family:-apple-system,'Segoe UI',Inter,Helvetica,sans-serif;background:
 <div id="review-bar">
   <div>
     <strong>${pageTitle}</strong>
-    <span> — Draft for Review · ${reviewDate}</span>
+    <span>  |  Page For Review  |  ${reviewDate}</span>
   </div>
   <div class="review-actions">
     <span id="note-count-badge">0 notes</span>
@@ -318,7 +349,7 @@ body{font-family:-apple-system,'Segoe UI',Inter,Helvetica,sans-serif;background:
 <!-- Footer -->
 <footer class="site-footer">
   <p><strong>${form.companyName}</strong> · ${form.city}, ${form.state}</p>
-  <p style="margin-top:4px">Draft prepared by Fencepost · ${reviewDate}</p>
+  <p style="margin-top:4px">Prepared by Fencepost · ${reviewDate}</p>
 </footer>
 
 <!-- All notes panel -->
