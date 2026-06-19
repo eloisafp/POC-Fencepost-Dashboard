@@ -629,7 +629,22 @@ export default function TemplateManager() {
   const [pdfError,     setPdfError]     = useState('')
   const pdfInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { loadTemplates().then(setTemplates) }, [])
+  useEffect(() => {
+    async function init() {
+      // One-time migration: move any localStorage templates into Supabase
+      const LS_KEY = 'fencepost_templates_v1'
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(LS_KEY) : null
+      if (raw) {
+        try {
+          const local: PageTemplate[] = JSON.parse(raw)
+          for (const t of local) await saveTemplate(t)
+          localStorage.removeItem(LS_KEY)
+        } catch { /* ignore parse errors */ }
+      }
+      setTemplates(await loadTemplates())
+    }
+    init()
+  }, [])
 
   async function handleSave(t: PageTemplate) {
     await saveTemplate(t); setTemplates(await loadTemplates())
