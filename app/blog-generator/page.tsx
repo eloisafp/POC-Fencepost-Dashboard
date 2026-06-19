@@ -735,7 +735,7 @@ export default function BlogGeneratorPage() {
                           onBlur={e => { if (!e.currentTarget.closest('tr')?.contains(e.relatedTarget as Node)) saveEdit(post.id) }}
                           onKeyDown={e => { if (e.key === 'Enter') saveEdit(post.id); if (e.key === 'Escape') setEditingId(null) }} />
                       ) : post.gdoc_url ? (
-                        <a href={post.gdoc_url} target="_blank" rel="noopener noreferrer"
+                        <a href={toEditUrl(post.gdoc_url!)} target="_blank" rel="noopener noreferrer"
                           className="hover:text-indigo-600 hover:underline transition-colors inline-flex items-center gap-1">
                           {post.blog_title}
                           <svg className="w-3 h-3 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -794,7 +794,7 @@ export default function BlogGeneratorPage() {
 
                         {/* View doc */}
                         {post.gdoc_url && (
-                          <a href={post.gdoc_url} target="_blank" rel="noopener noreferrer"
+                          <a href={toEditUrl(post.gdoc_url!)} target="_blank" rel="noopener noreferrer"
                             className="text-xs px-2.5 h-6 rounded-md border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-1 whitespace-nowrap">
                             <svg className="w-3 h-3 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
                               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 4h5v5a2 2 0 002 2h5v9H6V4z"/>
