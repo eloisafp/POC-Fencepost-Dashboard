@@ -401,16 +401,23 @@ export default function BlogGeneratorPage() {
   async function generateAllPending() {
     stopRef.current = false
     setGeneratingAll(true)
-    const pending = posts.filter(p => p.status === 'pending' || p.status === 'error')
-    for (let i = 0; i < pending.length; i++) {
-      if (stopRef.current) break
-      await generatePost(pending[i])
-      if (i < pending.length - 1 && !stopRef.current) {
-        await new Promise(r => setTimeout(r, 10000 + Math.floor(Math.random() * 5001)))
+    const runLoop = async () => {
+      const pending = posts.filter(p => p.status === 'pending' || p.status === 'error')
+      for (let i = 0; i < pending.length; i++) {
+        if (stopRef.current) break
+        await generatePost(pending[i])
+        if (i < pending.length - 1 && !stopRef.current) {
+          await new Promise(r => setTimeout(r, 10000 + Math.floor(Math.random() * 5001)))
+        }
       }
+      setGeneratingAll(false)
+      stopRef.current = false
     }
-    setGeneratingAll(false)
-    stopRef.current = false
+    if ('locks' in navigator) {
+      await (navigator as any).locks.request('blog-generate-all', async () => { await runLoop() })
+    } else {
+      await runLoop()
+    }
   }
 
   // ── Internal link check ───────────────────────────────────────────────────

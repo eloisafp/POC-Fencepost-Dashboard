@@ -346,42 +346,50 @@ function ClientGroupCard({ group, mode, templates, openDrivePicker, onUpdate, on
     abortRef.current = false
     onUpdate(g => ({ ...g, isRunning: true, pausedAtIndex: null }))
 
-    const template    = templates.find(t => t.id === group.templateId)
-    const currentRows = group.rows
-    const limit       = group.generateLimit
+    const runLoop = async () => {
+      const template    = templates.find(t => t.id === group.templateId)
+      const currentRows = group.rows
+      const limit       = group.generateLimit
 
-    let intakeFormContent = '', contentGuidelinesContent = ''
-    try {
-      const { data: cd } = await supabase.from('master_clients').select('intake_form_link, content_guidelines_url').ilike('client_name', group.companyName).limit(1).single()
-      if (cd) {
-        const [i, g2] = await Promise.all([fetchGdocText(cd.intake_form_link || ''), fetchGdocText(cd.content_guidelines_url || '')])
-        intakeFormContent = i; contentGuidelinesContent = g2
-      }
-      onUpdate(g => ({ ...g, contextStatus: { intake: !!intakeFormContent, guidelines: !!contentGuidelinesContent } }))
-    } catch { onUpdate(g => ({ ...g, contextStatus: { intake: false, guidelines: false } })) }
-
-    let generatedThisRun = 0
-
-    for (let i = fromIndex; i < currentRows.length; i++) {
-      if (abortRef.current) break
-      if (limit > 0 && generatedThisRun >= limit) break
-      const row = currentRows[i]
-      if (row.status === 'done') continue
-      updateRowById(row.id, { status: 'generating', errorMsg: undefined })
+      let intakeFormContent = '', contentGuidelinesContent = ''
       try {
-        const { docUrl } = await generateRow(row, group.companyName, group.websiteUrl, group.folderId, template?.sections, intakeFormContent, contentGuidelinesContent)
-        updateRowById(row.id, { status: 'done', docUrl })
-        generatedThisRun++
-      } catch (err: any) {
-        updateRowById(row.id, { status: 'error', errorMsg: err.message || 'Unknown error' })
-        onUpdate(g => ({ ...g, isRunning: false, pausedAtIndex: i }))
-        return
+        const { data: cd } = await supabase.from('master_clients').select('intake_form_link, content_guidelines_url').ilike('client_name', group.companyName).limit(1).single()
+        if (cd) {
+          const [i, g2] = await Promise.all([fetchGdocText(cd.intake_form_link || ''), fetchGdocText(cd.content_guidelines_url || '')])
+          intakeFormContent = i; contentGuidelinesContent = g2
+        }
+        onUpdate(g => ({ ...g, contextStatus: { intake: !!intakeFormContent, guidelines: !!contentGuidelinesContent } }))
+      } catch { onUpdate(g => ({ ...g, contextStatus: { intake: false, guidelines: false } })) }
+
+      let generatedThisRun = 0
+
+      for (let i = fromIndex; i < currentRows.length; i++) {
+        if (abortRef.current) break
+        if (limit > 0 && generatedThisRun >= limit) break
+        const row = currentRows[i]
+        if (row.status === 'done') continue
+        updateRowById(row.id, { status: 'generating', errorMsg: undefined })
+        try {
+          const { docUrl } = await generateRow(row, group.companyName, group.websiteUrl, group.folderId, template?.sections, intakeFormContent, contentGuidelinesContent)
+          updateRowById(row.id, { status: 'done', docUrl })
+          generatedThisRun++
+        } catch (err: any) {
+          updateRowById(row.id, { status: 'error', errorMsg: err.message || 'Unknown error' })
+          onUpdate(g => ({ ...g, isRunning: false, pausedAtIndex: i }))
+          return
+        }
+        if (i < currentRows.length - 1 && !abortRef.current) {
+          await new Promise(r => setTimeout(r, 10000 + Math.floor(Math.random() * 5001)))
+        }
       }
-      if (i < currentRows.length - 1 && !abortRef.current) {
-        await new Promise(r => setTimeout(r, 10000 + Math.floor(Math.random() * 5001)))
-      }
+      onUpdate(g => ({ ...g, isRunning: false, pausedAtIndex: null }))
     }
-    onUpdate(g => ({ ...g, isRunning: false, pausedAtIndex: null }))
+
+    if ('locks' in navigator) {
+      await (navigator as any).locks.request(`page-generate-${group.uid}`, async () => { await runLoop() })
+    } else {
+      await runLoop()
+    }
   }
 
   function retryFromError() { if (group.pausedAtIndex === null) return; updateRowById(group.rows[group.pausedAtIndex].id, { status: 'pending', errorMsg: undefined }); runGroup(group.pausedAtIndex) }
