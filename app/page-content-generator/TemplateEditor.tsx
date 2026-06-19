@@ -100,13 +100,24 @@ function CellEditor({ label, cell, onUpdate }: {
           </div>
         ) : (
           <div>
-            <label className="block text-xs text-gray-400 mb-1">
-              {cell.contentType === 'image' ? 'Caption' : 'Heading'}
-            </label>
+            <div className="flex items-center gap-2 mb-1">
+              <label className="block text-xs text-gray-400">
+                {cell.contentType === 'image' ? 'Caption' : 'Heading'}
+              </label>
+              {cell.contentType !== 'image' && (
+                <label className="flex items-center gap-1.5 ml-auto cursor-pointer">
+                  <span className="text-xs text-gray-400">AI varies heading</span>
+                  <div className={`relative w-7 h-4 rounded-full transition-colors ${cell.varyHeading ? 'bg-indigo-500' : 'bg-gray-200'}`}
+                    onClick={() => onUpdate({ ...cell, varyHeading: !cell.varyHeading })}>
+                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform ${cell.varyHeading ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                  </div>
+                </label>
+              )}
+            </div>
             <input ref={headingRef} className={inp} value={cell.heading}
-              placeholder={cell.contentType === 'image' ? 'Image description' : 'H2 heading — use {service} {city} etc.'}
+              placeholder={cell.contentType === 'image' ? 'Image description' : cell.varyHeading ? 'Topic hint for AI' : 'Heading — use {service} {city} etc.'}
               onChange={e => onUpdate({ ...cell, heading: e.target.value })} />
-            {cell.contentType !== 'image' && (
+            {cell.contentType !== 'image' && !cell.varyHeading && (
               <VarChips inputRef={headingRef} value={cell.heading}
                 onChange={v => onUpdate({ ...cell, heading: v })} />
             )}

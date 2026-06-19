@@ -14,6 +14,7 @@ export type ContentType =
 export interface CellDef {
   contentType: Exclude<ContentType, 'table'>
   heading: string
+  varyHeading?: boolean
   count: number
   wordsEach: number
   notes: string
@@ -287,7 +288,10 @@ export function buildPromptFromTemplate(
             }
             return addEmbed(col.htmlCode.trim())
           }
-          return buildCellContent(col, v, vars.subServices)
+          const resolvedCol = col.varyHeading
+            ? { ...col, heading: `[Write an original H2 heading — topic: ${applyVars(col.heading, v)} — use fresh wording]` }
+            : col
+          return buildCellContent(resolvedCol, v, vars.subServices)
         }
         out += `\n[COL-LEFT]\n${colContent(sec.leftCol)}[COL-RIGHT]\n${colContent(sec.rightCol)}[COL-END]\n`
       }
