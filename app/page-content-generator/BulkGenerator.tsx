@@ -709,10 +709,11 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
   openDrivePicker: (onSelect: (id: string, name: string) => void) => void
   mode: Mode
 }) {
-  const [groups,      setGroups]      = useState<ClientGroup[]>([])
-  const [templates,   setTemplates]   = useState<PageTemplate[]>([])
-  const [loading,     setLoading]     = useState(true)
-  const [masterError, setMasterError] = useState<string | null>(null)
+  const [groups,        setGroups]        = useState<ClientGroup[]>([])
+  const [templates,     setTemplates]     = useState<PageTemplate[]>([])
+  const [loading,       setLoading]       = useState(true)
+  const [masterError,   setMasterError]   = useState<string | null>(null)
+  const [searchClient,  setSearchClient]  = useState('')
 
   // ── Load from Supabase on mount (filtered by page_type) ──────────────────
 
@@ -862,9 +863,27 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
     <div className="space-y-3">
       {/* Top bar */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <p className="text-xs text-gray-400">
-          {groups.length} client{groups.length !== 1 ? 's' : ''} · {totalRows} total row{totalRows !== 1 ? 's' : ''}
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-gray-400">
+            {groups.length} client{groups.length !== 1 ? 's' : ''} · {totalRows} total row{totalRows !== 1 ? 's' : ''}
+          </p>
+          <div className="relative">
+            <svg className="w-3.5 h-3.5 text-gray-300 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 111 11a6 6 0 0116 0z"/>
+            </svg>
+            <input
+              className="h-8 pl-8 pr-3 border border-gray-200 rounded-md text-xs text-gray-700 outline-none focus:ring-1 focus:ring-gray-400 bg-white w-48 placeholder-gray-300"
+              placeholder="Search client…"
+              value={searchClient}
+              onChange={e => setSearchClient(e.target.value)}
+            />
+            {searchClient && (
+              <button onClick={() => setSearchClient('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            )}
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <button onClick={downloadMasterTemplate}
             className="text-xs px-3 h-8 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors flex items-center gap-1.5">
@@ -886,7 +905,7 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
         </div>
       )}
 
-      {groups.map(group => (
+      {groups.filter(g => !searchClient || g.companyName.toLowerCase().includes(searchClient.toLowerCase())).map(group => (
         <ClientGroupCard key={group.uid} group={group} mode={mode} templates={templates} openDrivePicker={openDrivePicker}
           onUpdate={update => updateGroup(group.uid, update)}
           onDelete={async () => {
