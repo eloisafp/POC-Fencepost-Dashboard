@@ -766,7 +766,7 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
     }
 
     setGroups(Array.from(groupMap.values()))
-    setTemplates(loadTemplates())
+    setTemplates(await loadTemplates())
     setLoading(false)
   }, [mode])
 

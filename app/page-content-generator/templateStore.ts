@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase'
+
 export type ContentType =
   | 'image'
   | 'paragraphs'
@@ -348,21 +350,31 @@ export function buildPromptFromTemplate(
   return { prompt: out, htmlEmbeds }
 }
 
-// ── localStorage CRUD ─────────────────────────────────────────────────────────
+// ── Supabase CRUD ─────────────────────────────────────────────────────────────
 
-const LS_KEY = 'fencepost_templates_v1'
-
-export function loadTemplates(): PageTemplate[] {
-  if (typeof window === 'undefined') return []
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]') }
-  catch { return [] }
+export async function loadTemplates(): Promise<PageTemplate[]> {
+  const { data, error } = await supabase
+    .from('page_templates')
+    .select('*')
+    .order('created_at', { ascending: true })
+  if (error || !data) return []
+  return data.map(r => ({
+    id: r.id,
+    name: r.name,
+    sections: r.sections as TemplateSection[],
+    createdAt: r.created_at,
+  }))
 }
 
-export function saveTemplate(t: PageTemplate): void {
-  const rest = loadTemplates().filter(x => x.id !== t.id)
-  localStorage.setItem(LS_KEY, JSON.stringify([...rest, t]))
+export async function saveTemplate(t: PageTemplate): Promise<void> {
+  await supabase.from('page_templates').upsert({
+    id: t.id,
+    name: t.name,
+    sections: t.sections,
+    created_at: t.createdAt,
+  })
 }
 
-export function deleteTemplate(id: string): void {
-  localStorage.setItem(LS_KEY, JSON.stringify(loadTemplates().filter(t => t.id !== id)))
+export async function deleteTemplate(id: string): Promise<void> {
+  await supabase.from('page_templates').delete().eq('id', id)
 }

@@ -629,16 +629,16 @@ export default function TemplateManager() {
   const [pdfError,     setPdfError]     = useState('')
   const pdfInputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => { setTemplates(loadTemplates()) }, [])
+  useEffect(() => { loadTemplates().then(setTemplates) }, [])
 
-  function handleSave(t: PageTemplate) {
-    saveTemplate(t); setTemplates(loadTemplates())
+  async function handleSave(t: PageTemplate) {
+    await saveTemplate(t); setTemplates(await loadTemplates())
   }
-  function handleDelete(id: string) {
+  async function handleDelete(id: string) {
     if (!confirm('Delete this template?')) return
-    deleteTemplate(id); setTemplates(loadTemplates())
+    await deleteTemplate(id); setTemplates(await loadTemplates())
   }
-  function handleDuplicate(t: PageTemplate) {
+  async function handleDuplicate(t: PageTemplate) {
     const copy: PageTemplate = {
       ...t,
       id:        uid(),
@@ -646,7 +646,7 @@ export default function TemplateManager() {
       sections:  t.sections.map(s => ({ ...s, id: uid() })),
       createdAt: new Date().toISOString(),
     }
-    saveTemplate(copy); setTemplates(loadTemplates())
+    await saveTemplate(copy); setTemplates(await loadTemplates())
   }
   function handleSaveAndBack(t: PageTemplate) {
     handleSave(t); setEditing(null)
