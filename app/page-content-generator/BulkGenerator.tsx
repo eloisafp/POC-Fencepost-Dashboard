@@ -889,7 +889,11 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
       {groups.map(group => (
         <ClientGroupCard key={group.uid} group={group} mode={mode} templates={templates} openDrivePicker={openDrivePicker}
           onUpdate={update => updateGroup(group.uid, update)}
-          onDelete={() => setGroups(gs => gs.filter(g => g.uid !== group.uid))} />
+          onDelete={async () => {
+            const ids = group.rows.map(r => r.id).filter(Boolean)
+            if (ids.length > 0) await supabase.from('page_queue').delete().in('id', ids)
+            setGroups(gs => gs.filter(g => g.uid !== group.uid))
+          }} />
       ))}
 
       {groups.length === 0 && (
