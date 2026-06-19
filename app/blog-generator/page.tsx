@@ -692,7 +692,7 @@ export default function BlogGeneratorPage() {
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-36">Client</th>
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-40">Keyword</th>
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium">Blog Title</th>
-                <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-24">Month</th>
+                <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-24">Blog Month</th>
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-24">Status</th>
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-52">Actions</th>
               </tr>
