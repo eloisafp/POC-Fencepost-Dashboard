@@ -46,7 +46,7 @@ const statusStyle: Record<string, string> = {
 
 const csmOptions     = ['', 'Nikki', 'Sarah', 'Ross']
 const adsOptions     = ['', 'Glenda', 'May', 'Ruchel', 'Kendrick', 'Ross']
-const seoOptions     = ['', 'Eloisa', 'Lindey', 'Mikel']
+const seoOptions     = ['', 'Eloisa', 'Lindey', 'Mikel', 'SEO Team']
 const packageOptions = ['', 'SEO Only', 'SEO + AEO', 'Full Fencepost', 'Ads Only']
 const statusOptions  = ['', 'active', 'onboarding', 'inactive', 'archived']
 

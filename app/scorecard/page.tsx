@@ -63,7 +63,7 @@ const statusOptions = ['', 'On Track', 'Trending Good', 'Trending Bad', 'Off Tra
 const satOptions    = ['', 'Doing Great!', 'FIRE!', 'At Risk', 'Onboarding', 'N/A']
 const csmOptions    = ['', 'Nikki', 'Sarah', 'Ross']
 const adsOptions    = ['', 'Glenda', 'May', 'Ruchel', 'Kendrick', 'Ross']
-const seoOptions    = ['', 'Eloisa', 'Lindey', 'Mikel']
+const seoOptions    = ['', 'Eloisa', 'Lindey', 'Mikel', 'SEO Team']
 
 // Inline editable cell — select dropdown
 function InlineSelect({
