@@ -12,6 +12,7 @@ export default function PageGeneratorPage() {
   const tokenClientRef    = useRef<any>(null)
   const accessTokenRef    = useRef<string>('')
   const pickerCallbackRef = useRef<((id: string, name: string) => void) | null>(null)
+  const tokenResolveRef   = useRef<((token: string) => void) | null>(null)
 
   useEffect(() => {
     const gapiScript = document.createElement('script')
@@ -24,11 +25,18 @@ export default function PageGeneratorPage() {
     gisScript.onload = () => {
       tokenClientRef.current = google.accounts.oauth2.initTokenClient({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        scope: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/documents',
         callback: (resp: any) => {
           if (resp.access_token) {
             accessTokenRef.current = resp.access_token
-            showPicker(resp.access_token)
+            if (tokenResolveRef.current) {
+              // Silent token request (from Generate flow) — just resolve, no picker
+              tokenResolveRef.current(resp.access_token)
+              tokenResolveRef.current = null
+            } else {
+              // Triggered by folder picker — show the picker
+              showPicker(resp.access_token)
+            }
           }
         },
       })
@@ -66,6 +74,15 @@ export default function PageGeneratorPage() {
     }
   }
 
+  function getAccessToken(): Promise<string> {
+    if (accessTokenRef.current) return Promise.resolve(accessTokenRef.current)
+    return new Promise((resolve, reject) => {
+      if (!tokenClientRef.current) { reject(new Error('Google auth not ready')); return }
+      tokenResolveRef.current = resolve
+      tokenClientRef.current.requestAccessToken({ prompt: '' })
+    })
+  }
+
   return (
     <div className="p-5">
       <div className="flex items-center justify-between mb-4">
@@ -88,8 +105,8 @@ export default function PageGeneratorPage() {
       </div>
 
       {view === 'templates'        && <TemplateManager />}
-      {view === 'service-location' && <BulkGenerator mode="service-location" openDrivePicker={openDrivePicker} />}
-      {view === 'service-only'     && <BulkGenerator mode="service-only"     openDrivePicker={openDrivePicker} />}
+      {view === 'service-location' && <BulkGenerator mode="service-location" openDrivePicker={openDrivePicker} accessTokenRef={accessTokenRef} getAccessToken={getAccessToken} />}
+      {view === 'service-only'     && <BulkGenerator mode="service-only"     openDrivePicker={openDrivePicker} accessTokenRef={accessTokenRef} getAccessToken={getAccessToken} />}
     </div>
   )
 }

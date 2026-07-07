@@ -196,6 +196,7 @@ Exactly 6 Q&As. Use **bold question** format, then a paragraph answer ~70 words 
 
   const orResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
+    signal: AbortSignal.timeout(170_000),
     headers: {
       Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       'Content-Type': 'application/json',

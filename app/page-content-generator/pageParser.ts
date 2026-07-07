@@ -57,7 +57,9 @@ export function parseBlocks(content: string): Block[] {
         items.push(lines[i].trim().slice(2)); i++
       }
       blocks.push({ type: 'list', items })
-    } else if (/^\[COL-LEFT\]$/i.test(t)) {
+    } else if (/^\[COL-LEFT/i.test(t)) {
+      const widthMatch = t.match(/width=(\d+)/i)
+      const leftWidth = widthMatch ? parseInt(widthMatch[1]) : undefined
       i++
       const leftLines: string[] = []
       while (i < lines.length && !/^\[COL-RIGHT\]$/i.test(lines[i].trim())) {
@@ -73,6 +75,7 @@ export function parseBlocks(content: string): Block[] {
         type: 'twocol',
         left:  parseBlocks(leftLines.join('\n')),
         right: parseBlocks(rightLines.join('\n')),
+        ...(leftWidth !== undefined ? { leftWidth } : {}),
       })
     } else if (/^\[IMAGE:/i.test(t)) {
       const caption = t.replace(/^\[IMAGE:\s*/i, '').replace(/\]$/, '').trim()
