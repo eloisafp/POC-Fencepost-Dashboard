@@ -439,6 +439,9 @@ function ClientGroupCard({ group, mode, templates, openDrivePicker, onUpdate, on
             <svg className="w-3 h-3 text-green-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/></svg>
             <span className="text-xs text-green-700 max-w-[120px] truncate">{group.folderName}</span>
             <button onClick={() => openDrivePicker((id, name) => onUpdate(g => ({ ...g, folderId: id, folderName: name })))} className="text-xs text-green-600 hover:text-green-800 ml-1">Change</button>
+            <a href={`https://drive.google.com/drive/folders/${group.folderId}`} target="_blank" rel="noopener noreferrer" title="Open folder in Drive" className="text-green-500 hover:text-green-700 transition-colors ml-0.5">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            </a>
           </div>
         ) : (
           <button onClick={() => openDrivePicker((id, name) => onUpdate(g => ({ ...g, folderId: id, folderName: name })))}
