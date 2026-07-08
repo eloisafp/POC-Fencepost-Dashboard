@@ -765,8 +765,10 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
       groupMap.get(row.client_name)!.rows.push(dbRowToLocal(row))
     }
 
-    setGroups(Array.from(groupMap.values()))
-    setTemplates(await loadTemplates())
+    const allTemplates = await loadTemplates()
+    const defaultTemplateId = allTemplates.find(t => t.name === 'Default Template for All')?.id ?? ''
+    setGroups(Array.from(groupMap.values()).map(g => ({ ...g, templateId: defaultTemplateId })))
+    setTemplates(allTemplates)
     setLoading(false)
   }, [mode])
 
@@ -775,9 +777,10 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
   const totalRows = groups.reduce((a, g) => a + g.rows.length, 0)
 
   function addGroup() {
+    const defaultTemplateId = templates.find(t => t.name === 'Default Template for All')?.id ?? ''
     setGroups(g => [...g, {
       uid: localUid(), companyName: '', websiteUrl: '',
-      folderId: '', folderName: '', templateId: '',
+      folderId: '', folderName: '', templateId: defaultTemplateId,
       collapsed: false, rows: [], isRunning: false, pausedAtIndex: null,
       generateLimit: 0, contextStatus: null,
     }])
@@ -841,7 +844,7 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
               next.push({
                 uid: localUid(), companyName: row.client_name,
                 websiteUrl: folder?.websiteUrl || '', folderId: folder?.folderId || '', folderName: folder?.folderName || '',
-                templateId: '', collapsed: false, rows: [dbRowToLocal(row)],
+                templateId: templates.find(t => t.name === 'Default Template for All')?.id ?? '', collapsed: false, rows: [dbRowToLocal(row)],
                 isRunning: false, pausedAtIndex: null, generateLimit: 0, contextStatus: null,
               })
             }
