@@ -295,8 +295,7 @@ export function buildPromptFromTemplate(
             : col
           return buildCellContent(resolvedCol, v, vars.subServices)
         }
-        const lw = sec.leftWidth ?? 45
-        out += `\n[COL-LEFT width=${lw}]\n${colContent(sec.leftCol)}[COL-RIGHT]\n${colContent(sec.rightCol)}[COL-END]\n`
+        out += `\n[COL-LEFT]\n${colContent(sec.leftCol)}[COL-RIGHT]\n${colContent(sec.rightCol)}[COL-END]\n`
       }
       continue
     }
