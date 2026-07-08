@@ -778,12 +778,12 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
 
   function addGroup() {
     const defaultTemplateId = templates.find(t => t.name === 'Default Template for All')?.id ?? ''
-    setGroups(g => [...g, {
+    setGroups(g => [{
       uid: localUid(), companyName: '', websiteUrl: '',
       folderId: '', folderName: '', templateId: defaultTemplateId,
       collapsed: false, rows: [], isRunning: false, pausedAtIndex: null,
       generateLimit: 0, contextStatus: null,
-    }])
+    }, ...g])
   }
 
   function updateGroup(uid: string, update: Partial<ClientGroup> | ((g: ClientGroup) => ClientGroup)) {
