@@ -729,7 +729,7 @@ export default function BulkGenerator({ openDrivePicker, mode }: {
 
   const loadGroups = useCallback(async () => {
     const [{ data: rows }, { data: clients }] = await Promise.all([
-      supabase.from('page_queue').select('*').eq('page_type', mode).order('created_at', { ascending: true }),
+      supabase.from('page_queue').select('*').eq('page_type', mode).order('created_at', { ascending: false }),
       supabase.from('master_clients').select('client_name, website_url, location_page_folder_url'),
     ])
 
