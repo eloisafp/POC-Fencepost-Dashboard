@@ -1,0 +1,335 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { supabase } from '../lib/supabase'
+
+type Run = {
+  id: number
+  master_client_id: number
+  client_slug: string
+  phase: string
+  intake: any
+  competitors: any
+  content_guidelines: any
+  existing_pages: any
+}
+
+type MasterClient = { client_name: string; intake_form_link: string | null; content_guidelines_url: string | null }
+type ContentPlanItem = { id: number; title: string; content_track: string; status: string; page_status: string | null; volume: number | null; kd: number | null }
+
+const TABS = ['Intake', 'Keywords', 'Clusters', 'Content Plan', 'Export'] as const
+type Tab = typeof TABS[number]
+
+const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
+  'Topic for Client Approval': { bg: 'bg-amber-50', text: 'text-amber-600' },
+  new:      { bg: 'bg-gray-100', text: 'text-gray-500' },
+  optimize: { bg: 'bg-blue-50',  text: 'text-blue-600' },
+}
+
+async function postJson(url: string, body: any) {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || `Request failed (${res.status})`)
+  return json
+}
+
+type StepStatus = 'pending' | 'running' | 'done' | 'error'
+type Phase1Steps = { intake: StepStatus; guidelines: StepStatus; seeds: StepStatus; competitors: StepStatus }
+
+export default function RunWorkspace({ runId, onBack }: { runId: number; onBack: () => void }) {
+  const [run, setRun]       = useState<Run | null>(null)
+  const [client, setClient] = useState<MasterClient | null>(null)
+  const [tab, setTab]       = useState<Tab>('Intake')
+  const [busy, setBusy]     = useState<string | null>(null)
+  const [error, setError]   = useState<string | null>(null)
+  const [seeds, setSeeds]   = useState<any>(null)
+  const [phase1Steps, setPhase1Steps] = useState<Phase1Steps>({ intake: 'pending', guidelines: 'pending', seeds: 'pending', competitors: 'pending' })
+
+  const [items, setItems]       = useState<ContentPlanItem[]>([])
+  const [clusters, setClusters] = useState<any[]>([])
+
+  const loadRun = useCallback(async () => {
+    const { data } = await supabase.from('keyword_pipeline_runs').select('*').eq('id', runId).single()
+    if (data) {
+      setRun(data as Run)
+      const { data: c } = await supabase
+        .from('master_clients')
+        .select('client_name, intake_form_link, content_guidelines_url')
+        .eq('id', data.master_client_id)
+        .single()
+      if (c) setClient(c as MasterClient)
+    }
+  }, [runId])
+
+  useEffect(() => { loadRun() }, [loadRun])
+
+  useEffect(() => {
+    if (tab === 'Content Plan') {
+      supabase.from('keyword_pipeline_content_plan_items').select('*').eq('run_id', runId)
+        .then(({ data }) => setItems((data || []) as ContentPlanItem[]))
+    }
+    if (tab === 'Clusters') {
+      supabase.from('keyword_pipeline_clusters').select('*').eq('run_id', runId)
+        .then(({ data }) => setClusters(data || []))
+    }
+  }, [tab, runId])
+
+  async function run_(action: string, fn: () => Promise<void>) {
+    setBusy(action); setError(null)
+    try { await fn() } catch (e: any) { setError(e.message) }
+    setBusy(null)
+  }
+
+  async function runPhase1() {
+    if (!client?.intake_form_link) return
+    setBusy('phase1'); setError(null)
+    setPhase1Steps({ intake: 'pending', guidelines: 'pending', seeds: 'pending', competitors: 'pending' })
+
+    let currentRun = run!
+    let currentSeeds: any = null
+
+    // Step 1 — intake
+    setPhase1Steps(s => ({ ...s, intake: 'running' }))
+    try {
+      const r = await postJson('/api/keyword-pipeline/intake', { run_id: runId })
+      currentRun = { ...currentRun, intake: r.intake }
+      setRun(currentRun)
+      setPhase1Steps(s => ({ ...s, intake: 'done' }))
+    } catch (e: any) {
+      setPhase1Steps(s => ({ ...s, intake: 'error' }))
+      setError(`Intake: ${e.message}`)
+      setBusy(null); return
+    }
+
+    // Step 2 — guidelines (optional, never blocks)
+    setPhase1Steps(s => ({ ...s, guidelines: 'running' }))
+    try {
+      const r = await postJson('/api/keyword-pipeline/guidelines', { run_id: runId })
+      currentRun = { ...currentRun, content_guidelines: r.content_guidelines }
+      setRun(currentRun)
+      setPhase1Steps(s => ({ ...s, guidelines: 'done' }))
+    } catch {
+      setPhase1Steps(s => ({ ...s, guidelines: 'error' }))
+    }
+
+    // Step 3 — seeds
+    setPhase1Steps(s => ({ ...s, seeds: 'running' }))
+    try {
+      const r = await postJson('/api/keyword-pipeline/seeds', { run_id: runId })
+      currentSeeds = r.seeds
+      setSeeds(currentSeeds)
+      setPhase1Steps(s => ({ ...s, seeds: 'done' }))
+    } catch (e: any) {
+      setPhase1Steps(s => ({ ...s, seeds: 'error' }))
+      setError(`Seeds: ${e.message}`)
+      setBusy(null); return
+    }
+
+    // Step 4 — competitors
+    setPhase1Steps(s => ({ ...s, competitors: 'running' }))
+    try {
+      const r = await postJson('/api/keyword-pipeline/competitors', { run_id: runId, seeds: currentSeeds })
+      currentRun = { ...currentRun, competitors: r.competitors }
+      setRun(currentRun)
+      setPhase1Steps(s => ({ ...s, competitors: 'done' }))
+    } catch (e: any) {
+      setPhase1Steps(s => ({ ...s, competitors: 'error' }))
+      setError(`Competitors: ${e.message}`)
+    }
+
+    setBusy(null)
+  }
+
+  if (!run) return <div style={{ padding: 24, fontSize: 12, color: '#94a3b8' }}>Loading…</div>
+
+  return (
+    <div style={{ padding: 24, maxWidth: 860 }}>
+      <button onClick={onBack} style={{ fontSize: 11, color: '#71717a', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 12 }}>← Back</button>
+      <h1 style={{ fontSize: 16, fontWeight: 600, color: '#18181b', marginBottom: 16 }}>{run.client_slug}</h1>
+
+      <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e2e8f0', marginBottom: 16 }}>
+        {TABS.map(t => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{
+              padding: '8px 12px', fontSize: 12, fontWeight: tab === t ? 600 : 400,
+              color: tab === t ? '#18181b' : '#94a3b8', background: 'none', border: 'none',
+              borderBottom: tab === t ? '2px solid #18181b' : '2px solid transparent', cursor: 'pointer',
+            }}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {error && tab !== 'Intake' && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{error}</div>}
+
+      {tab === 'Intake' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Sources */}
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 11, color: '#71717a', minWidth: 130 }}>Intake form</span>
+              {client?.intake_form_link
+                ? <a href={client.intake_form_link} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#2563eb' }}>Open doc ↗</a>
+                : <span style={{ fontSize: 12, color: '#f87171' }}>Not set — add on Clients page first</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 11, color: '#71717a', minWidth: 130 }}>Content guidelines</span>
+              {client?.content_guidelines_url
+                ? <a href={client.content_guidelines_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#2563eb' }}>Open doc ↗</a>
+                : <span style={{ fontSize: 12, color: '#94a3b8' }}>Not set — guidelines step will be skipped</span>}
+            </div>
+          </div>
+
+          {/* Run Phase 1 button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              disabled={!client?.intake_form_link || busy === 'phase1'}
+              onClick={runPhase1}
+              className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
+            >
+              {busy === 'phase1' ? 'Running…' : run.intake ? '↺ Re-run Phase 1' : '▶ Run Phase 1'}
+            </button>
+            {!client?.intake_form_link && <span style={{ fontSize: 11, color: '#f87171' }}>Intake form link required</span>}
+          </div>
+
+          {/* Step progress (visible once started) */}
+          {(busy === 'phase1' || phase1Steps.intake !== 'pending') && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {([
+                { key: 'intake',      label: 'Parse Intake' },
+                { key: 'guidelines',  label: 'Parse Guidelines' },
+                { key: 'seeds',       label: 'Generate Seeds' },
+                { key: 'competitors', label: 'Resolve Competitors' },
+              ] as { key: keyof Phase1Steps; label: string }[]).map(({ key, label }) => {
+                const s = phase1Steps[key]
+                const color = s === 'done' ? '#16a34a' : s === 'error' ? '#dc2626' : s === 'running' ? '#2563eb' : '#94a3b8'
+                const icon  = s === 'done' ? '✓' : s === 'error' ? '✕' : s === 'running' ? '…' : '○'
+                return (
+                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                    <span style={{ color, fontWeight: 600, width: 14, textAlign: 'center' }}>{icon}</span>
+                    <span style={{ color: s === 'pending' ? '#94a3b8' : '#18181b' }}>{label}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {error && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
+
+          {/* Results */}
+          {run.intake && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: 6 }}>Parsed intake</div>
+              <pre style={{ fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 6, overflowX: 'auto' }}>{JSON.stringify(run.intake, null, 2)}</pre>
+            </div>
+          )}
+          {run.content_guidelines && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: 6 }}>Parsed guidelines</div>
+              <pre style={{ fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 6, overflowX: 'auto' }}>{JSON.stringify(run.content_guidelines, null, 2)}</pre>
+            </div>
+          )}
+          {seeds && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: 6 }}>Seeds</div>
+              <pre style={{ fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 6, overflowX: 'auto' }}>{JSON.stringify(seeds, null, 2)}</pre>
+            </div>
+          )}
+          {run.competitors && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: 6 }}>Competitors</div>
+              {run.competitors?.has_auto_derived && (
+                <div style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', padding: '8px 12px', borderRadius: 6, marginBottom: 8 }}>
+                  Fewer than 2 clean competitors found — manual entry may be needed.
+                </div>
+              )}
+              <pre style={{ fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 6, overflowX: 'auto' }}>{JSON.stringify(run.competitors, null, 2)}</pre>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'Keywords' && (
+        <div>
+          <div style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>
+            Ahrefs integration not yet configured — set AHREFS_API_KEY in .env.local.
+          </div>
+          <button disabled className="text-xs px-3 py-1.5 rounded-md bg-zinc-900 text-white opacity-40">Fetch Keywords</button>
+        </div>
+      )}
+
+      {tab === 'Clusters' && (
+        <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
+              <th style={{ padding: '6px 8px' }}>Cluster</th>
+              <th style={{ padding: '6px 8px' }}># Keywords</th>
+              <th style={{ padding: '6px 8px' }}>Total Volume</th>
+              <th style={{ padding: '6px 8px' }}>Avg KD</th>
+            </tr>
+          </thead>
+          <tbody>
+            {clusters.length === 0 ? (
+              <tr><td colSpan={4} style={{ padding: '16px 8px', color: '#94a3b8' }}>Clusters will appear here once keywords are fetched and clustered.</td></tr>
+            ) : clusters.map(c => (
+              <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <td style={{ padding: '6px 8px' }}>{c.label}</td>
+                <td style={{ padding: '6px 8px' }}>—</td>
+                <td style={{ padding: '6px 8px' }}>—</td>
+                <td style={{ padding: '6px 8px' }}>—</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {tab === 'Content Plan' && (
+        <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
+              <th style={{ padding: '6px 8px' }}>Title</th>
+              <th style={{ padding: '6px 8px' }}>Track</th>
+              <th style={{ padding: '6px 8px' }}>Status</th>
+              <th style={{ padding: '6px 8px' }}>Volume</th>
+              <th style={{ padding: '6px 8px' }}>KD</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 ? (
+              <tr><td colSpan={5} style={{ padding: '16px 8px', color: '#94a3b8' }}>Content plan items will appear here once Phase 4 has run.</td></tr>
+            ) : items.map(item => {
+              const style = STATUS_STYLE[item.page_status || item.status] || STATUS_STYLE.new
+              return (
+                <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '6px 8px' }}>{item.title}</td>
+                  <td style={{ padding: '6px 8px' }}>{item.content_track}</td>
+                  <td style={{ padding: '6px 8px' }}><span className={`px-2 py-0.5 rounded-full text-[11px] ${style.bg} ${style.text}`}>{item.status}</span></td>
+                  <td style={{ padding: '6px 8px' }}>{item.volume ?? '—'}</td>
+                  <td style={{ padding: '6px 8px' }}>{item.kd ?? '—'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
+
+      {tab === 'Export' && (
+        <div>
+          <div style={{ fontSize: 12, color: '#71717a', marginBottom: 12 }}>
+            Downloads a multi-tab Excel workbook (Content Calendar, KW Summary, All Keywords, Keyword Map, one tab per cluster). Empty tabs are expected until Phases 2–4 have populated data.
+          </div>
+          <a
+            href={`/api/keyword-pipeline/export?run_id=${runId}`}
+            className="text-xs px-3 py-1.5 rounded-md bg-zinc-900 text-white inline-block"
+          >
+            Download Excel Workbook
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
