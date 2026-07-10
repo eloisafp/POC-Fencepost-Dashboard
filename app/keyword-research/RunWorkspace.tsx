@@ -118,12 +118,6 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
     if (tab === 'Clusters') loadClusters()
   }, [tab, runId, loadKeywords, loadClusters])
 
-  async function run_(action: string, fn: () => Promise<void>) {
-    setBusy(action); setError(null)
-    try { await fn() } catch (e: any) { setError(e.message) }
-    setBusy(null)
-  }
-
   async function runPhase1() {
     if (!client?.intake_form_link) return
     setBusy('phase1'); setError(null)

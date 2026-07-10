@@ -103,14 +103,24 @@ export async function GET(req: NextRequest) {
   headerRow(kwMap, ['Existing URL', 'Proposed Keyword', 'Volume', 'KD', 'Suggested Meta Title', 'Suggested Meta Description'])
   const primaryCity: string | undefined = run.intake?.primary_location?.city
   const existingPages: any[] = Array.isArray(run.existing_pages) ? run.existing_pages : []
+  const usedKeywordIds = new Set<number>()
   for (const page of existingPages.filter(p => p.include_in_keyword_map)) {
-    const scored = (keywords || []).map(k => {
+    // Tokens from the URL path, e.g. /services/ac-repair -> ["services","ac","repair"]
+    const pathTokens = (page.url || '').toLowerCase().replace(/^https?:\/\/[^/]+/, '')
+      .split(/[^a-z0-9]+/).filter((t: string) => t.length > 2)
+    const scored = (keywords || []).filter(k => !usedKeywordIds.has(k.id)).map(k => {
       let score = (k.monthly_volume || 0) - (k.kd || 0) * 5
       if (primaryCity && k.keyword?.toLowerCase().includes(primaryCity.toLowerCase())) score += 150
-      return { k, score }
+      // Relevance to this page: reward keyword words appearing in the URL path
+      const kwWords = (k.keyword || '').toLowerCase().split(/\s+/)
+      const overlap = kwWords.filter((w: string) => pathTokens.includes(w)).length
+      score += overlap * 400
+      return { k, score, overlap }
     }).sort((a, b) => b.score - a.score)
-    const best = scored[0]?.k
+    // Only map a keyword that actually relates to the page
+    const best = scored.find(s => s.overlap > 0)?.k
     if (!best) continue
+    usedKeywordIds.add(best.id)
     const title = `${best.keyword} | ${page.current_title || ''}`.slice(0, 60)
     const desc = (page.current_meta_description || `Learn about ${best.keyword}.`).slice(0, 155)
     kwMap.addRow([page.url, best.keyword, best.monthly_volume, best.kd, title, desc])

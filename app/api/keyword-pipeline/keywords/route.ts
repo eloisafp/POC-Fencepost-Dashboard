@@ -185,6 +185,8 @@ export async function POST(req: NextRequest) {
           top_keyword_volume: p.top_keyword_volume ?? null,
           top_keyword_position: p.top_keyword_best_position ?? null,
           source: 'ahrefs_top_pages',
+          // Export's Keyword Map tab only includes flagged pages; homepage excluded
+          include_in_keyword_map: p.url.replace(/^https?:\/\/[^/]+/, '').replace(/\/+$/, '') !== '',
         }))
       } catch (e: any) {
         warnings.push(`top-pages (${clientDomain}): ${e.message}`)
@@ -200,7 +202,11 @@ export async function POST(req: NextRequest) {
             existingPages = locs
               .filter(u => !u.endsWith('.xml')) // skip sitemap-index child sitemaps
               .slice(0, 200)
-              .map(url => ({ url, source: 'sitemap' }))
+              .map(url => ({
+                url,
+                source: 'sitemap',
+                include_in_keyword_map: url.replace(/^https?:\/\/[^/]+/, '').replace(/\/+$/, '') !== '',
+              }))
             if (existingPages.length) warnings.push('Ahrefs top-pages returned nothing — used sitemap.xml fallback (URLs only, no traffic data)')
           }
         } catch {

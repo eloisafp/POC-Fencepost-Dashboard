@@ -82,15 +82,16 @@ export async function POST(req: NextRequest) {
       const clusterIds = new Set(clusters.map(c => c.id))
       const seenKw = new Set<string>()
       for (const item of plan?.items || []) {
-        if (!item.title || !clusterIds.has(item.cluster_id)) continue
+        const clusterId = Number(item.cluster_id) // AI occasionally emits ids as strings
+        if (!item.title || !clusterIds.has(clusterId)) continue
         const pk = (item.primary_keyword || '').toLowerCase()
         if (pk && seenKw.has(pk)) continue
         if (pk) seenKw.add(pk)
         const kwRow = kwByText.get(pk)
-        const cluster = clusters.find(c => c.id === item.cluster_id)
+        const cluster = clusters.find(c => c.id === clusterId)
         rows.push({
           run_id,
-          cluster_id: item.cluster_id,
+          cluster_id: clusterId,
           type: 'blog_post',
           content_track: 'blog',
           title: item.title,

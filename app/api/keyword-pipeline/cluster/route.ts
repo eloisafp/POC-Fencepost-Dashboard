@@ -67,7 +67,8 @@ export async function POST(req: NextRequest) {
 
     for (const c of clusters) {
       if (!c.slug || !c.label) continue
-      const ids = (c.keyword_ids || []).filter(id => validIds.has(id) && !assigned.has(id))
+      // Coerce — the AI occasionally emits ids as strings
+      const ids = (c.keyword_ids || []).map(Number).filter(id => validIds.has(id) && !assigned.has(id))
       if (ids.length === 0) continue
 
       const { data: inserted, error: insErr } = await sb
