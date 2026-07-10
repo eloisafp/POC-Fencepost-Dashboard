@@ -25,10 +25,28 @@ type KeywordRow = {
   search_intent: string | null
 }
 
+type ExportRecord = {
+  id: number
+  filename: string
+  public_url: string | null
+  size_bytes: number | null
+  created_at: string
+}
+
+function formatExportDate(iso: string): string {
+  const d = new Date(iso)
+  return `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} · ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+}
+
+function formatSize(bytes: number | null): string {
+  if (bytes == null) return '—'
+  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 type MasterClient = { client_name: string; intake_form_link: string | null; content_guidelines_url: string | null }
 type ContentPlanItem = { id: number; title: string; content_track: string; status: string; page_status: string | null; volume: number | null; kd: number | null }
 
-const TABS = ['Intake', 'Keywords', 'Clusters', 'Content Plan', 'Export'] as const
+const TABS = ['Intake', 'Keywords', 'Clusters', 'Content Plan', 'View Exports'] as const
 type Tab = typeof TABS[number]
 
 const STATUS_STYLE: Record<string, { bg: string; text: string }> = {
@@ -82,6 +100,17 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
   const [kwSummary, setKwSummary] = useState<{ total_keywords: number; by_source: Record<string, number>; existing_pages_count: number; warnings: string[] } | null>(null)
   const [planSummary, setPlanSummary] = useState<{ total_items: number; blog_count: number; location_count: number; optimize_count: number; warnings: string[] } | null>(null)
 
+  const [exports, setExports] = useState<ExportRecord[]>([])
+
+  const loadExports = useCallback(async () => {
+    const { data } = await supabase
+      .from('keyword_pipeline_exports')
+      .select('id, filename, public_url, size_bytes, created_at')
+      .eq('run_id', runId)
+      .order('created_at', { ascending: false })
+    setExports((data || []) as ExportRecord[])
+  }, [runId])
+
   const loadKeywords = useCallback(async () => {
     const { data, count } = await supabase
       .from('keyword_pipeline_keywords')
@@ -116,7 +145,19 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
         .then(({ data }) => setItems((data || []) as ContentPlanItem[]))
     }
     if (tab === 'Clusters') loadClusters()
-  }, [tab, runId, loadKeywords, loadClusters])
+    if (tab === 'View Exports') loadExports()
+  }, [tab, runId, loadKeywords, loadClusters, loadExports])
+
+  async function generateExport() {
+    setBusy('export'); setError(null)
+    try {
+      await postJson('/api/keyword-pipeline/export/save', { run_id: runId })
+      await loadExports()
+    } catch (e: any) {
+      setError(e.message)
+    }
+    setBusy(null)
+  }
 
   async function runPhase1() {
     if (!client?.intake_form_link) return
@@ -524,17 +565,75 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
         </div>
       )}
 
-      {tab === 'Export' && (
-        <div>
-          <div style={{ fontSize: 12, color: '#71717a', marginBottom: 12 }}>
-            Downloads a multi-tab Excel workbook (Content Calendar, KW Summary, All Keywords, Keyword Map, one tab per cluster). Empty tabs are expected until Phases 2–4 have populated data.
+      {tab === 'View Exports' && (
+        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', maxWidth: 700 }}>
+
+          {/* Header: run context + generate button */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#94a3b8' }}>
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H9l-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              <span>Run for <strong style={{ color: '#52525b', fontWeight: 600 }}>{run.client_slug}</strong> &nbsp;·&nbsp; {exports.length} saved export{exports.length === 1 ? '' : 's'}</span>
+            </div>
+            <button
+              onClick={generateExport}
+              disabled={busy === 'export'}
+              className="text-[11px] font-medium px-3 h-8 rounded-[7px] bg-zinc-900 text-white disabled:opacity-40 flex items-center gap-1.5 shrink-0"
+            >
+              <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+              {busy === 'export' ? 'Generating…' : 'Generate New Export'}
+            </button>
           </div>
-          <a
-            href={`/api/keyword-pipeline/export?run_id=${runId}`}
-            className="text-xs px-3 py-1.5 rounded-md bg-zinc-900 text-white inline-block"
-          >
-            Download Excel Workbook
-          </a>
+
+          <div style={{ padding: '10px 20px 8px', fontSize: 10, fontWeight: 600, color: '#94a3b8', letterSpacing: '.06em', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9' }}>
+            Saved exports
+          </div>
+
+          {exports.length === 0 && (
+            <div style={{ padding: '20px', fontSize: 12, color: '#94a3b8' }}>
+              No saved exports yet — click <span style={{ color: '#52525b', fontWeight: 500 }}>Generate New Export</span> to create the first one.
+            </div>
+          )}
+
+          {exports.map((e, i) => (
+            <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '28px 1fr auto', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i === exports.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
+              <div style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 600, color: '#52525b', fontVariantNumeric: 'tabular-nums' }}>
+                {exports.length - i}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 500, color: '#18181b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 3 }}>
+                  {e.filename}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#94a3b8' }}>
+                  <span>{formatExportDate(e.created_at)}</span>
+                  <span style={{ color: '#e2e8f0' }}>·</span>
+                  <span>{formatSize(e.size_bytes)}</span>
+                  <span style={{ color: '#e2e8f0' }}>·</span>
+                  {i === 0
+                    ? <span style={{ padding: '1px 7px', borderRadius: 99, fontSize: 10, fontWeight: 500, background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}>Latest</span>
+                    : <span style={{ padding: '1px 7px', borderRadius: 99, fontSize: 10, fontWeight: 500, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d' }}>Saved</span>}
+                </div>
+              </div>
+              <a
+                href={e.public_url ?? '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 5, height: 30, padding: '0 10px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, fontSize: 11, fontWeight: 500, color: '#0369a1', textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                <svg width="12" height="12" fill="none" stroke="#0284c7" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download
+              </a>
+            </div>
+          ))}
+
+          <div style={{ padding: '12px 20px', fontSize: 11, color: '#94a3b8', borderTop: '1px solid #f1f5f9', lineHeight: 1.5 }}>
+            Each export is saved to Supabase Storage and linked to this run. <span style={{ color: '#52525b', fontWeight: 500 }}>Generate New Export</span> adds a new version — existing ones are never overwritten.
+          </div>
         </div>
       )}
     </div>
