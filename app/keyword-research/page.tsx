@@ -117,8 +117,8 @@ export default function KeywordResearchPage() {
 
   return (
     <div style={{ padding: '48px 24px 24px', maxWidth: 720, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 18, fontWeight: 600, color: '#18181b', marginBottom: 4 }}>Keyword Research → Content Plan</h1>
-      <p style={{ fontSize: 12, color: '#71717a', marginBottom: 20 }}>Client intake → Ahrefs keyword research → clustering → content plan → Excel export.</p>
+      <h1 style={{ fontSize: 18, fontWeight: 600, color: '#18181b', marginBottom: 4, textAlign: 'center' }}>Keyword Research → Content Plan</h1>
+      <p style={{ fontSize: 12, color: '#71717a', marginBottom: 20, textAlign: 'center' }}>Client intake → Ahrefs keyword research → clustering → content plan → Excel export.</p>
 
       <div style={{ marginBottom: 20 }}>
         <ClientDropdown clients={clients} value={client} onChange={setClient} />
