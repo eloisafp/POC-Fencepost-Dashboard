@@ -261,7 +261,7 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
   if (!run) return <div style={{ padding: 24, fontSize: 12, color: '#94a3b8' }}>Loading…</div>
 
   return (
-    <div style={{ padding: 24, maxWidth: 860 }}>
+    <div style={{ padding: 24, maxWidth: 860, margin: '0 auto' }}>
       <button onClick={onBack} style={{ fontSize: 11, color: '#71717a', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 12 }}>← Back</button>
       <h1 style={{ fontSize: 16, fontWeight: 600, color: '#18181b', marginBottom: 16 }}>{run.client_slug}</h1>
 
