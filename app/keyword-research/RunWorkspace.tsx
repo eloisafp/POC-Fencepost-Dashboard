@@ -58,6 +58,25 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
 
   const [items, setItems]       = useState<ContentPlanItem[]>([])
   const [clusters, setClusters] = useState<any[]>([])
+  const [unclustered, setUnclustered] = useState(0)
+
+  const loadClusters = useCallback(async () => {
+    const [{ data: cls }, { data: kws }] = await Promise.all([
+      supabase.from('keyword_pipeline_clusters').select('id, slug, label, service_category').eq('run_id', runId),
+      supabase.from('keyword_pipeline_keywords').select('cluster_id, monthly_volume, kd').eq('run_id', runId).limit(5000),
+    ])
+    const rows = kws || []
+    const enriched = (cls || []).map(c => {
+      const mine = rows.filter(k => k.cluster_id === c.id)
+      const totalVolume = mine.reduce((s, k) => s + (k.monthly_volume || 0), 0)
+      const kdVals = mine.filter(k => k.kd != null)
+      const avgKd = kdVals.length ? kdVals.reduce((s, k) => s + Number(k.kd), 0) / kdVals.length : null
+      return { ...c, count: mine.length, totalVolume, avgKd }
+    }).sort((a, b) => b.totalVolume - a.totalVolume)
+    setClusters(enriched)
+    setUnclustered(rows.filter(k => k.cluster_id == null).length)
+    setKwCount(rows.length)
+  }, [runId])
   const [keywords, setKeywords] = useState<KeywordRow[]>([])
   const [kwCount, setKwCount]   = useState(0)
   const [kwSummary, setKwSummary] = useState<{ total_keywords: number; by_source: Record<string, number>; existing_pages_count: number; warnings: string[] } | null>(null)
@@ -95,11 +114,8 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
       supabase.from('keyword_pipeline_content_plan_items').select('*').eq('run_id', runId)
         .then(({ data }) => setItems((data || []) as ContentPlanItem[]))
     }
-    if (tab === 'Clusters') {
-      supabase.from('keyword_pipeline_clusters').select('*').eq('run_id', runId)
-        .then(({ data }) => setClusters(data || []))
-    }
-  }, [tab, runId])
+    if (tab === 'Clusters') loadClusters()
+  }, [tab, runId, loadKeywords, loadClusters])
 
   async function run_(action: string, fn: () => Promise<void>) {
     setBusy(action); setError(null)
@@ -164,6 +180,18 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
       setError(`Competitors: ${e.message}`)
     }
 
+    setBusy(null)
+  }
+
+  async function runPhase3() {
+    setBusy('phase3'); setError(null)
+    try {
+      await postJson('/api/keyword-pipeline/cluster', { run_id: runId })
+      setRun(prev => prev ? { ...prev, phase: 'clusters' } : prev)
+      await loadClusters()
+    } catch (e: any) {
+      setError(e.message)
+    }
     setBusy(null)
   }
 
@@ -364,28 +392,67 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
       )}
 
       {tab === 'Clusters' && (
-        <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
-              <th style={{ padding: '6px 8px' }}>Cluster</th>
-              <th style={{ padding: '6px 8px' }}># Keywords</th>
-              <th style={{ padding: '6px 8px' }}>Total Volume</th>
-              <th style={{ padding: '6px 8px' }}>Avg KD</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clusters.length === 0 ? (
-              <tr><td colSpan={4} style={{ padding: '16px 8px', color: '#94a3b8' }}>Clusters will appear here once keywords are fetched and clustered.</td></tr>
-            ) : clusters.map(c => (
-              <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '6px 8px' }}>{c.label}</td>
-                <td style={{ padding: '6px 8px' }}>—</td>
-                <td style={{ padding: '6px 8px' }}>—</td>
-                <td style={{ padding: '6px 8px' }}>—</td>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              disabled={kwCount === 0 || busy === 'phase3'}
+              onClick={runPhase3}
+              className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
+            >
+              {busy === 'phase3' ? 'Clustering with AI…' : clusters.length > 0 ? '↺ Re-run Phase 3' : '▶ Run Phase 3 — Cluster Keywords'}
+            </button>
+            {kwCount === 0 && <span style={{ fontSize: 11, color: '#f87171' }}>Run Phase 2 first — keywords are required</span>}
+            {clusters.length > 0 && busy !== 'phase3' && (
+              <span style={{ fontSize: 11, color: '#71717a' }}>
+                {clusters.length} clusters · {kwCount - unclustered} of {kwCount} keywords assigned
+              </span>
+            )}
+          </div>
+
+          {busy === 'phase3' && (
+            <div style={{ fontSize: 12, color: '#2563eb', background: '#eff6ff', padding: '8px 12px', borderRadius: 6 }}>
+              Claude is filtering and clustering {kwCount} keywords — this takes a minute. Re-running replaces existing clusters.
+            </div>
+          )}
+
+          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
+                <th style={{ padding: '6px 8px' }}>Cluster</th>
+                <th style={{ padding: '6px 8px' }}>Service Category</th>
+                <th style={{ padding: '6px 8px', textAlign: 'right' }}># Keywords</th>
+                <th style={{ padding: '6px 8px', textAlign: 'right' }}>Total Volume</th>
+                <th style={{ padding: '6px 8px', textAlign: 'right' }}>Avg KD</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {clusters.length === 0 ? (
+                <tr><td colSpan={5} style={{ padding: '16px 8px', color: '#94a3b8' }}>Clusters will appear here once keywords are fetched and clustered.</td></tr>
+              ) : (
+                <>
+                  {clusters.map(c => (
+                    <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '6px 8px' }}>{c.label}</td>
+                      <td style={{ padding: '6px 8px', color: '#71717a' }}>{c.service_category ?? '—'}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.count}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.totalVolume.toLocaleString()}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.avgKd != null ? Math.round(c.avgKd) : '—'}</td>
+                    </tr>
+                  ))}
+                  {unclustered > 0 && (
+                    <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#94a3b8' }}>
+                      <td style={{ padding: '6px 8px' }}>Uncategorized (filtered out by AI)</td>
+                      <td style={{ padding: '6px 8px' }}>—</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>{unclustered}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>—</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>—</td>
+                    </tr>
+                  )}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {tab === 'Content Plan' && (
