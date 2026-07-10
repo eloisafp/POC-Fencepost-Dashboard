@@ -80,6 +80,7 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
   const [keywords, setKeywords] = useState<KeywordRow[]>([])
   const [kwCount, setKwCount]   = useState(0)
   const [kwSummary, setKwSummary] = useState<{ total_keywords: number; by_source: Record<string, number>; existing_pages_count: number; warnings: string[] } | null>(null)
+  const [planSummary, setPlanSummary] = useState<{ total_items: number; blog_count: number; location_count: number; optimize_count: number; warnings: string[] } | null>(null)
 
   const loadKeywords = useCallback(async () => {
     const { data, count } = await supabase
@@ -180,6 +181,20 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
       setError(`Competitors: ${e.message}`)
     }
 
+    setBusy(null)
+  }
+
+  async function runPhase4() {
+    setBusy('phase4'); setError(null); setPlanSummary(null)
+    try {
+      const r = await postJson('/api/keyword-pipeline/content-plan', { run_id: runId })
+      setPlanSummary(r)
+      setRun(prev => prev ? { ...prev, phase: 'content_plan' } : prev)
+      const { data } = await supabase.from('keyword_pipeline_content_plan_items').select('*').eq('run_id', runId)
+      setItems((data || []) as ContentPlanItem[])
+    } catch (e: any) {
+      setError(e.message)
+    }
     setBusy(null)
   }
 
@@ -456,6 +471,35 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
       )}
 
       {tab === 'Content Plan' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              disabled={busy === 'phase4'}
+              onClick={runPhase4}
+              className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
+            >
+              {busy === 'phase4' ? 'Generating content plan…' : items.length > 0 ? '↺ Re-run Phase 4' : '▶ Run Phase 4 — Generate Content Plan'}
+            </button>
+            {items.length > 0 && busy !== 'phase4' && <span style={{ fontSize: 11, color: '#71717a' }}>{items.length} items</span>}
+          </div>
+
+          {busy === 'phase4' && (
+            <div style={{ fontSize: 12, color: '#2563eb', background: '#eff6ff', padding: '8px 12px', borderRadius: 6 }}>
+              Generating: blog topics per cluster (AI) → location pages (services × areas) → audit vs existing pages. Re-running replaces the current plan.
+            </div>
+          )}
+
+          {planSummary && (
+            <div style={{ fontSize: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 12px', borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ color: '#166534', fontWeight: 600 }}>
+                ✓ {planSummary.total_items} items · {planSummary.blog_count} blog posts · {planSummary.location_count} location pages · {planSummary.optimize_count} marked optimize
+              </span>
+              {planSummary.warnings.length > 0 && (
+                <span style={{ color: '#b45309' }}>⚠ {planSummary.warnings.join(' | ')}</span>
+              )}
+            </div>
+          )}
+
         <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
@@ -483,6 +527,7 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
             })}
           </tbody>
         </table>
+        </div>
       )}
 
       {tab === 'Export' && (
