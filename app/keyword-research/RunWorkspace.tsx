@@ -9,9 +9,20 @@ type Run = {
   client_slug: string
   phase: string
   intake: any
+  seeds: any
   competitors: any
   content_guidelines: any
   existing_pages: any
+}
+
+type KeywordRow = {
+  id: number
+  keyword: string
+  monthly_volume: number | null
+  kd: number | null
+  cpc: number | null
+  source: string | null
+  search_intent: string | null
 }
 
 type MasterClient = { client_name: string; intake_form_link: string | null; content_guidelines_url: string | null }
@@ -47,11 +58,26 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
 
   const [items, setItems]       = useState<ContentPlanItem[]>([])
   const [clusters, setClusters] = useState<any[]>([])
+  const [keywords, setKeywords] = useState<KeywordRow[]>([])
+  const [kwCount, setKwCount]   = useState(0)
+  const [kwSummary, setKwSummary] = useState<{ total_keywords: number; by_source: Record<string, number>; existing_pages_count: number; warnings: string[] } | null>(null)
+
+  const loadKeywords = useCallback(async () => {
+    const { data, count } = await supabase
+      .from('keyword_pipeline_keywords')
+      .select('id, keyword, monthly_volume, kd, cpc, source, search_intent', { count: 'exact' })
+      .eq('run_id', runId)
+      .order('monthly_volume', { ascending: false, nullsFirst: false })
+      .limit(200)
+    setKeywords((data || []) as KeywordRow[])
+    setKwCount(count || 0)
+  }, [runId])
 
   const loadRun = useCallback(async () => {
     const { data } = await supabase.from('keyword_pipeline_runs').select('*').eq('id', runId).single()
     if (data) {
       setRun(data as Run)
+      if (data.seeds) setSeeds(data.seeds)
       const { data: c } = await supabase
         .from('master_clients')
         .select('client_name, intake_form_link, content_guidelines_url')
@@ -64,6 +90,7 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
   useEffect(() => { loadRun() }, [loadRun])
 
   useEffect(() => {
+    if (tab === 'Keywords') loadKeywords()
     if (tab === 'Content Plan') {
       supabase.from('keyword_pipeline_content_plan_items').select('*').eq('run_id', runId)
         .then(({ data }) => setItems((data || []) as ContentPlanItem[]))
@@ -137,6 +164,19 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
       setError(`Competitors: ${e.message}`)
     }
 
+    setBusy(null)
+  }
+
+  async function runPhase2() {
+    setBusy('phase2'); setError(null); setKwSummary(null)
+    try {
+      const r = await postJson('/api/keyword-pipeline/keywords', { run_id: runId })
+      setKwSummary(r)
+      setRun(prev => prev ? { ...prev, phase: 'keywords' } : prev)
+      await loadKeywords()
+    } catch (e: any) {
+      setError(e.message)
+    }
     setBusy(null)
   }
 
@@ -254,11 +294,72 @@ export default function RunWorkspace({ runId, onBack }: { runId: number; onBack:
       )}
 
       {tab === 'Keywords' && (
-        <div>
-          <div style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>
-            Ahrefs integration not yet configured — set AHREFS_API_KEY in .env.local.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              disabled={!seeds || busy === 'phase2'}
+              onClick={runPhase2}
+              className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
+            >
+              {busy === 'phase2' ? 'Fetching from Ahrefs… (takes a minute)' : kwCount > 0 ? '↺ Re-run Phase 2' : '▶ Run Phase 2 — Fetch Keywords'}
+            </button>
+            {!seeds && <span style={{ fontSize: 11, color: '#f87171' }}>Run Phase 1 first — seeds are required</span>}
+            {kwCount > 0 && busy !== 'phase2' && <span style={{ fontSize: 11, color: '#71717a' }}>{kwCount} keywords stored</span>}
           </div>
-          <button disabled className="text-xs px-3 py-1.5 rounded-md bg-zinc-900 text-white opacity-40">Fetch Keywords</button>
+
+          {busy === 'phase2' && (
+            <div style={{ fontSize: 12, color: '#2563eb', background: '#eff6ff', padding: '8px 12px', borderRadius: 6 }}>
+              Running 3 jobs: seed expansion → competitor gap → site audit. Re-running replaces previous keywords for this run.
+            </div>
+          )}
+
+          {kwSummary && (
+            <div style={{ fontSize: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 12px', borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ color: '#166534', fontWeight: 600 }}>✓ {kwSummary.total_keywords} keywords fetched · {kwSummary.existing_pages_count} existing pages found</span>
+              <span style={{ color: '#166534' }}>
+                {Object.entries(kwSummary.by_source).map(([s, n]) => `${s}: ${n}`).join(' · ')}
+              </span>
+              {kwSummary.warnings.length > 0 && (
+                <span style={{ color: '#b45309' }}>⚠ {kwSummary.warnings.join(' | ')}</span>
+              )}
+            </div>
+          )}
+
+          {keywords.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, color: '#71717a', marginBottom: 6 }}>
+                Top {keywords.length} of {kwCount} by volume
+              </div>
+              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
+                    <th style={{ padding: '6px 8px' }}>Keyword</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>Volume</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>KD</th>
+                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>CPC</th>
+                    <th style={{ padding: '6px 8px' }}>Intent</th>
+                    <th style={{ padding: '6px 8px' }}>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {keywords.map(k => (
+                    <tr key={k.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '6px 8px' }}>{k.keyword}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>{k.monthly_volume?.toLocaleString() ?? '—'}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>{k.kd ?? '—'}</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right' }}>{k.cpc != null ? `$${Number(k.cpc).toFixed(2)}` : '—'}</td>
+                      <td style={{ padding: '6px 8px', color: '#71717a' }}>{k.search_intent ?? '—'}</td>
+                      <td style={{ padding: '6px 8px', color: '#71717a' }}>{k.source ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {keywords.length === 0 && busy !== 'phase2' && (
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>No keywords yet — run Phase 2 to fetch from Ahrefs.</div>
+          )}
         </div>
       )}
 
