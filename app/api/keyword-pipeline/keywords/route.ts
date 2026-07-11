@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { supabaseServer } from '../../../../lib/keyword-pipeline/server'
-import { ahrefsGet, todayStr, toDomain, intentLabel } from '../../../../lib/keyword-pipeline/ahrefs'
+import { ahrefsGet, getRemainingUnits, todayStr, toDomain, intentLabel } from '../../../../lib/keyword-pipeline/ahrefs'
 
 // POST { run_id: number } -> { total_keywords, by_source, existing_pages_count, warnings }
 //
@@ -11,18 +11,22 @@ import { ahrefsGet, todayStr, toDomain, intentLabel } from '../../../../lib/keyw
 //
 // Ahrefs charges API units per row * selected column, so limits below are deliberately
 // conservative. Raise them once a run has been validated end-to-end.
-// TEST_MODE keeps a full run to roughly 4-6k Ahrefs units (vs ~25-35k full):
+// TEST_MODE keeps a full run to roughly 4-6k Ahrefs units:
 // smaller row limits and no traffic_potential/top_keyword_volume columns
-// (each metric column costs ~10 units per row). Flip to false once the
-// process is validated and fuller keyword coverage is wanted.
-const TEST_MODE = true
+// (each metric column costs ~10 units per row).
+const TEST_MODE = false
 
-const MATCHING_TERMS_LIMIT = TEST_MODE ? 25 : 100 // per service (seeds batched into one call)
-const RELATED_TERMS_LIMIT = TEST_MODE ? 10 : 50   // per service
-const ORGANIC_KEYWORDS_LIMIT = TEST_MODE ? 40 : 200 // per competitor domain
-const TOP_PAGES_LIMIT = TEST_MODE ? 50 : 100
+// Full limits are sized for the 80k-units-per-run budget: a typical run
+// (3 services, 3 competitors) lands around ~40k; a large one (5 x 5) ~70k.
+const MATCHING_TERMS_LIMIT = TEST_MODE ? 25 : 150 // per service (seeds batched into one call)
+const RELATED_TERMS_LIMIT = TEST_MODE ? 10 : 75   // per service
+const ORGANIC_KEYWORDS_LIMIT = TEST_MODE ? 40 : 300 // per competitor domain
+const TOP_PAGES_LIMIT = TEST_MODE ? 50 : 150
 const MIN_VOLUME = 10
 const COUNTRY = 'us'
+
+// Pre-flight guard: refuse to start the fetch unless this many units remain
+const MIN_UNITS_REQUIRED = 80000
 
 // keywords-explorer select: traffic_potential adds 10 units/row — skip in test mode
 const KE_SELECT = TEST_MODE
@@ -60,6 +64,15 @@ export async function POST(req: NextRequest) {
     if (runError || !run) return Response.json({ error: 'Run not found' }, { status: 404 })
     if (!run.intake) return Response.json({ error: 'Run has no parsed intake — run Phase 1 first' }, { status: 400 })
     if (!run.seeds?.seeds_by_service) return Response.json({ error: 'Run has no seeds — run Phase 1 first' }, { status: 400 })
+
+    // Credit guard: never start a fetch that could run the account dry mid-way
+    const remaining = await getRemainingUnits()
+    if (remaining < MIN_UNITS_REQUIRED) {
+      return Response.json({
+        error: `Not enough Ahrefs API units: ${remaining.toLocaleString()} remaining, ${MIN_UNITS_REQUIRED.toLocaleString()} required per run. Reload credits and try again.`,
+        insufficient_credits: true,
+      }, { status: 402 })
+    }
 
     const warnings: string[] = []
     const date = todayStr()

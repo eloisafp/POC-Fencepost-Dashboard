@@ -27,6 +27,17 @@ export async function ahrefsGet(endpoint: string, params: Record<string, string 
   return res.json()
 }
 
+// Remaining API units across both the workspace and this API key's own cap
+// (null limit = unlimited). The limits-and-usage call itself costs no units.
+export async function getRemainingUnits(): Promise<number> {
+  const res = await ahrefsGet('/subscription-info/limits-and-usage', {})
+  const u = res.limits_and_usage
+  if (!u) throw new Error('Ahrefs did not return usage info')
+  const workspaceLeft = u.units_limit_workspace == null ? Infinity : u.units_limit_workspace - (u.units_usage_workspace ?? 0)
+  const apiKeyLeft = u.units_limit_api_key == null ? Infinity : u.units_limit_api_key - (u.units_usage_api_key ?? 0)
+  return Math.min(workspaceLeft, apiKeyLeft)
+}
+
 export function todayStr(): string {
   return new Date().toISOString().slice(0, 10)
 }

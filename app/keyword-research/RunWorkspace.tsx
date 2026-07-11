@@ -87,6 +87,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
   const [phase1Steps, setPhase1Steps] = useState<Phase1Steps>({ intake: 'pending', guidelines: 'pending', seeds: 'pending', competitors: 'pending' })
   const [pipeline, setPipeline] = useState<Record<PipelineKey, StepStatus> | null>(null)
   const pipelineStarted = useRef(false)
+  const [creditsError, setCreditsError] = useState<string | null>(null)
 
   // Manual competitor entry: when intake yields no usable competitors, the run
   // pauses on a dialog until the user submits 1-10 competitors (or skips)
@@ -326,6 +327,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
         mark(s.key, 'done')
       } catch (e: any) {
         mark(s.key, 'error')
+        if (e.message?.includes('Not enough Ahrefs API units')) setCreditsError(e.message)
         if (!s.optional) {
           setError(`${PIPELINE_STEPS.find(p => p.key === s.key)?.label}: ${e.message}`)
           setBusy(null)
@@ -386,6 +388,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
       setRun(prev => prev ? { ...prev, phase: 'keywords' } : prev)
       await loadKeywords()
     } catch (e: any) {
+      if (e.message?.includes('Not enough Ahrefs API units')) setCreditsError(e.message)
       setError(e.message)
     }
     setBusy(null)
@@ -437,6 +440,27 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
           </div>
         )
       })()}
+
+      {creditsError && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(24,24,27,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '20px 22px', width: 400, maxWidth: 'calc(100vw - 48px)', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#dc2626', marginBottom: 8 }}>
+              ⚠ Not enough Ahrefs credits
+            </div>
+            <div style={{ fontSize: 12, color: '#52525b', lineHeight: 1.6, marginBottom: 16 }}>
+              {creditsError}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setCreditsError(null)}
+                className="text-xs px-4 h-8 rounded-md bg-zinc-900 text-white font-medium"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {compDialogOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(24,24,27,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
