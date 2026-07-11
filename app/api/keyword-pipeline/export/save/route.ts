@@ -14,6 +14,12 @@ export async function POST(req: NextRequest) {
     const sb = supabaseServer()
     const { buffer, filename } = await buildWorkbook(sb, run_id)
 
+    const { data: run } = await sb
+      .from('keyword_pipeline_runs')
+      .select('client_slug')
+      .eq('id', run_id)
+      .single()
+
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const storagePath = `run-${run_id}/${stamp}-${filename}`
 
@@ -31,6 +37,7 @@ export async function POST(req: NextRequest) {
       .insert({
         run_id,
         filename,
+        client_slug: run?.client_slug ?? null,
         storage_path: storagePath,
         public_url: pub.publicUrl,
         size_bytes: buffer.byteLength,

@@ -11,7 +11,7 @@ type ExportRow = {
   public_url: string | null
   size_bytes: number | null
   created_at: string
-  keyword_pipeline_runs: { client_slug: string } | null
+  client_slug: string | null
 }
 
 function formatExportDate(iso: string): string {
@@ -125,7 +125,7 @@ export default function KeywordResearchPage() {
     setLoadingExports(true)
     const { data } = await supabase
       .from('keyword_pipeline_exports')
-      .select('id, filename, public_url, size_bytes, created_at, keyword_pipeline_runs(client_slug)')
+      .select('id, filename, public_url, size_bytes, created_at, client_slug')
       .order('created_at', { ascending: false })
       .limit(200)
     setAllExports((data || []) as unknown as ExportRow[])
@@ -228,7 +228,7 @@ export default function KeywordResearchPage() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: '#94a3b8' }}>
                   <span style={{ padding: '1px 7px', borderRadius: 99, fontSize: 10, fontWeight: 500, background: '#f8fafc', border: '1px solid #e2e8f0', color: '#52525b' }}>
-                    {e.keyword_pipeline_runs?.client_slug ?? 'unknown client'}
+                    {e.client_slug ?? 'unknown client'}
                   </span>
                   <span style={{ color: '#e2e8f0' }}>·</span>
                   <span>{formatExportDate(e.created_at)}</span>
