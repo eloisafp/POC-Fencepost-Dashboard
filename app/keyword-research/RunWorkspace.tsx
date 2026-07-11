@@ -88,6 +88,48 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
   const [pipeline, setPipeline] = useState<Record<PipelineKey, StepStatus> | null>(null)
   const pipelineStarted = useRef(false)
 
+  // Manual competitor entry: when intake yields no usable competitors, the run
+  // pauses on a dialog until the user submits 1-10 competitors (or skips)
+  const [compDialogOpen, setCompDialogOpen] = useState(false)
+  const [compRows, setCompRows] = useState<{ name: string; website: string }[]>([{ name: '', website: '' }])
+  const compResolver = useRef<((comps: { name: string; domain: string; source: string }[]) => void) | null>(null)
+
+  function askForCompetitors(): Promise<{ name: string; domain: string; source: string }[]> {
+    setCompRows([{ name: '', website: '' }])
+    setCompDialogOpen(true)
+    return new Promise(resolve => { compResolver.current = resolve })
+  }
+
+  function submitCompetitors(skip: boolean) {
+    const toDomain = (u: string) => u.trim().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]
+    const entries = skip ? [] : compRows
+      .filter(r => r.name.trim() && r.website.trim())
+      .slice(0, 10)
+      .map(r => ({ name: r.name.trim(), domain: toDomain(r.website), source: 'manual' }))
+    if (!skip && entries.length === 0) return // Save requires at least 1 complete row
+    setCompDialogOpen(false)
+    compResolver.current?.(entries)
+    compResolver.current = null
+  }
+
+  // Merge manual competitors into the run when the resolver found fewer than 2 clean ones
+  async function ensureCompetitors(comps: any): Promise<any> {
+    if (comps?.competitors?.length >= 2 && !comps.has_auto_derived) return comps
+    const manual = await askForCompetitors()
+    if (manual.length === 0) return comps
+    const merged = {
+      ...comps,
+      competitors: [...(comps?.competitors || []), ...manual],
+      total: (comps?.competitors?.length || 0) + manual.length,
+      has_auto_derived: false,
+    }
+    await supabase
+      .from('keyword_pipeline_runs')
+      .update({ competitors: merged, updated_at: new Date().toISOString() })
+      .eq('id', runId)
+    return merged
+  }
+
   const [items, setItems]       = useState<ContentPlanItem[]>([])
   const [clusters, setClusters] = useState<any[]>([])
   const [unclustered, setUnclustered] = useState(0)
@@ -222,7 +264,8 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
     setPhase1Steps(s => ({ ...s, competitors: 'running' }))
     try {
       const r = await postJson('/api/keyword-pipeline/competitors', { run_id: runId, seeds: currentSeeds })
-      currentRun = { ...currentRun, competitors: r.competitors }
+      const finalComps = await ensureCompetitors(r.competitors)
+      currentRun = { ...currentRun, competitors: finalComps }
       setRun(currentRun)
       setPhase1Steps(s => ({ ...s, competitors: 'done' }))
     } catch (e: any) {
@@ -256,7 +299,8 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
       } },
       { key: 'competitors', fn: async () => {
         const r = await postJson('/api/keyword-pipeline/competitors', { run_id: runId, seeds: currentSeeds })
-        setRun(prev => prev ? { ...prev, competitors: r.competitors } : prev)
+        const finalComps = await ensureCompetitors(r.competitors)
+        setRun(prev => prev ? { ...prev, competitors: finalComps } : prev)
       } },
       { key: 'keywords', fn: async () => {
         const r = await postJson('/api/keyword-pipeline/keywords', { run_id: runId })
@@ -392,6 +436,74 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
           </div>
         )
       })()}
+
+      {compDialogOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(24,24,27,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '20px 22px', width: 460, maxWidth: 'calc(100vw - 48px)', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b', marginBottom: 6 }}>
+              Add competitors to continue
+            </div>
+            <div style={{ fontSize: 12, color: '#71717a', lineHeight: 1.5, marginBottom: 14 }}>
+              The intake form named fewer than 2 usable competitors. Enter at least 1 (up to 10) — their websites feed the competitor gap analysis in the keyword fetch.
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+              {compRows.map((row, i) => (
+                <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input
+                    value={row.name}
+                    onChange={e => setCompRows(rows => rows.map((r, j) => j === i ? { ...r, name: e.target.value } : r))}
+                    placeholder="Competitor name"
+                    className="h-8 border border-gray-200 rounded-md px-2.5 text-xs text-gray-800 outline-none focus:ring-1 focus:ring-gray-400 bg-white placeholder-gray-300"
+                    style={{ flex: 1 }}
+                  />
+                  <input
+                    value={row.website}
+                    onChange={e => setCompRows(rows => rows.map((r, j) => j === i ? { ...r, website: e.target.value } : r))}
+                    placeholder="Website URL"
+                    className="h-8 border border-gray-200 rounded-md px-2.5 text-xs text-gray-800 outline-none focus:ring-1 focus:ring-gray-400 bg-white placeholder-gray-300"
+                    style={{ flex: 1 }}
+                  />
+                  {compRows.length > 1 && (
+                    <button
+                      onClick={() => setCompRows(rows => rows.filter((_, j) => j !== i))}
+                      title="Remove"
+                      style={{ width: 26, height: 26, border: '1px solid #e2e8f0', borderRadius: 6, background: 'none', color: '#94a3b8', cursor: 'pointer', flexShrink: 0, fontSize: 13, lineHeight: 1 }}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {compRows.length < 10 && (
+              <button
+                onClick={() => setCompRows(rows => [...rows, { name: '', website: '' }])}
+                style={{ fontSize: 11, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginBottom: 16 }}
+              >
+                + Add another competitor ({compRows.length}/10)
+              </button>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                onClick={() => submitCompetitors(true)}
+                style={{ fontSize: 11, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                Skip — continue without competitors
+              </button>
+              <button
+                onClick={() => submitCompetitors(false)}
+                disabled={!compRows.some(r => r.name.trim() && r.website.trim())}
+                className="text-xs px-3 h-8 rounded-md bg-zinc-900 text-white font-medium disabled:opacity-40"
+              >
+                Save & continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e2e8f0', marginBottom: 16 }}>
         {TABS.map(t => (
