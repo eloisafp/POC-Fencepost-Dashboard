@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
         })
       }
       if (rows.length === 0) warnings.push('Blog planner returned no usable items')
+      else if (rows.length < 12) warnings.push(`Blog planner returned ${rows.length} topics (minimum is 12) — consider re-running Phase 4`)
     } catch (e: any) {
       warnings.push(`Blog planner: ${e.message}`)
     }
