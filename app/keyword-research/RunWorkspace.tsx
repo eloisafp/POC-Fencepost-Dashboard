@@ -466,34 +466,16 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
 
           {error && !pipeline && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
 
-          {/* Results */}
+          {/* Results summary */}
           {run.intake && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: 6 }}>Parsed intake</div>
-              <pre style={{ fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 6, overflowX: 'auto' }}>{JSON.stringify(run.intake, null, 2)}</pre>
+            <div style={{ fontSize: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 12px', borderRadius: 6, color: '#166534' }}>
+              ✓ Intake parsed — {run.intake.services?.length ?? 0} services, {run.intake.service_areas?.length ?? 0} service areas, {run.intake.competitors?.length ?? 0} competitors
+              {seeds?.total_seeds ? ` · ${seeds.total_seeds} seed keywords` : ''}
             </div>
           )}
-          {run.content_guidelines && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: 6 }}>Parsed guidelines</div>
-              <pre style={{ fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 6, overflowX: 'auto' }}>{JSON.stringify(run.content_guidelines, null, 2)}</pre>
-            </div>
-          )}
-          {seeds && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: 6 }}>Seeds</div>
-              <pre style={{ fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 6, overflowX: 'auto' }}>{JSON.stringify(seeds, null, 2)}</pre>
-            </div>
-          )}
-          {run.competitors && (
-            <div>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#71717a', marginBottom: 6 }}>Competitors</div>
-              {run.competitors?.has_auto_derived && (
-                <div style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', padding: '8px 12px', borderRadius: 6, marginBottom: 8 }}>
-                  Fewer than 2 clean competitors found — manual entry may be needed.
-                </div>
-              )}
-              <pre style={{ fontSize: 11, background: '#f8fafc', border: '1px solid #e2e8f0', padding: 10, borderRadius: 6, overflowX: 'auto' }}>{JSON.stringify(run.competitors, null, 2)}</pre>
+          {run.competitors?.has_auto_derived && (
+            <div style={{ fontSize: 12, color: '#b45309', background: '#fffbeb', padding: '8px 12px', borderRadius: 6 }}>
+              Fewer than 2 clean competitors found — manual entry may be needed.
             </div>
           )}
         </div>
