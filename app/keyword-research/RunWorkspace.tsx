@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 type Run = {
@@ -65,7 +65,19 @@ async function postJson(url: string, body: any) {
 type StepStatus = 'pending' | 'running' | 'done' | 'error'
 type Phase1Steps = { intake: StepStatus; guidelines: StepStatus; seeds: StepStatus; competitors: StepStatus }
 
-export default function RunWorkspace({ runId, onBack, initialTab }: { runId: number; onBack: () => void; initialTab?: Tab }) {
+const PIPELINE_STEPS = [
+  { key: 'intake',      label: 'Parsing intake form' },
+  { key: 'guidelines',  label: 'Parsing content guidelines' },
+  { key: 'seeds',       label: 'Generating seed keywords' },
+  { key: 'competitors', label: 'Resolving competitors' },
+  { key: 'keywords',    label: 'Fetching keywords from Ahrefs' },
+  { key: 'cluster',     label: 'Clustering keywords with AI' },
+  { key: 'plan',        label: 'Generating content plan' },
+  { key: 'export',      label: 'Saving Excel export' },
+] as const
+type PipelineKey = typeof PIPELINE_STEPS[number]['key']
+
+export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { runId: number; onBack: () => void; initialTab?: Tab; autoRun?: boolean }) {
   const [run, setRun]       = useState<Run | null>(null)
   const [client, setClient] = useState<MasterClient | null>(null)
   const [tab, setTab]       = useState<Tab>(initialTab ?? 'Intake')
@@ -73,6 +85,8 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
   const [error, setError]   = useState<string | null>(null)
   const [seeds, setSeeds]   = useState<any>(null)
   const [phase1Steps, setPhase1Steps] = useState<Phase1Steps>({ intake: 'pending', guidelines: 'pending', seeds: 'pending', competitors: 'pending' })
+  const [pipeline, setPipeline] = useState<Record<PipelineKey, StepStatus> | null>(null)
+  const pipelineStarted = useRef(false)
 
   const [items, setItems]       = useState<ContentPlanItem[]>([])
   const [clusters, setClusters] = useState<any[]>([])
@@ -219,6 +233,80 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
     setBusy(null)
   }
 
+  async function runFullPipeline() {
+    setBusy('pipeline'); setError(null)
+    setPipeline(Object.fromEntries(PIPELINE_STEPS.map(s => [s.key, 'pending'])) as Record<PipelineKey, StepStatus>)
+    const mark = (k: PipelineKey, s: StepStatus) => setPipeline(p => (p ? { ...p, [k]: s } : p))
+
+    let currentSeeds: any = null
+    const steps: { key: PipelineKey; optional?: boolean; fn: () => Promise<void> }[] = [
+      { key: 'intake', fn: async () => {
+        const r = await postJson('/api/keyword-pipeline/intake', { run_id: runId })
+        setRun(prev => prev ? { ...prev, intake: r.intake } : prev)
+      } },
+      // Guidelines are optional — a missing doc never stops the pipeline
+      { key: 'guidelines', optional: true, fn: async () => {
+        const r = await postJson('/api/keyword-pipeline/guidelines', { run_id: runId })
+        setRun(prev => prev ? { ...prev, content_guidelines: r.content_guidelines } : prev)
+      } },
+      { key: 'seeds', fn: async () => {
+        const r = await postJson('/api/keyword-pipeline/seeds', { run_id: runId })
+        currentSeeds = r.seeds
+        setSeeds(r.seeds)
+      } },
+      { key: 'competitors', fn: async () => {
+        const r = await postJson('/api/keyword-pipeline/competitors', { run_id: runId, seeds: currentSeeds })
+        setRun(prev => prev ? { ...prev, competitors: r.competitors } : prev)
+      } },
+      { key: 'keywords', fn: async () => {
+        const r = await postJson('/api/keyword-pipeline/keywords', { run_id: runId })
+        setKwSummary(r)
+      } },
+      { key: 'cluster', fn: async () => {
+        await postJson('/api/keyword-pipeline/cluster', { run_id: runId })
+      } },
+      { key: 'plan', fn: async () => {
+        const r = await postJson('/api/keyword-pipeline/content-plan', { run_id: runId })
+        setPlanSummary(r)
+      } },
+      { key: 'export', fn: async () => {
+        await postJson('/api/keyword-pipeline/export/save', { run_id: runId })
+      } },
+    ]
+
+    for (const s of steps) {
+      mark(s.key, 'running')
+      try {
+        await s.fn()
+        mark(s.key, 'done')
+      } catch (e: any) {
+        mark(s.key, 'error')
+        if (!s.optional) {
+          setError(`${PIPELINE_STEPS.find(p => p.key === s.key)?.label}: ${e.message}`)
+          setBusy(null)
+          return
+        }
+      }
+    }
+
+    await loadRun()
+    await loadExports()
+    setTab('View Exports')
+    setBusy(null)
+  }
+
+  // Auto-start the full pipeline when opened from "+ New run"
+  useEffect(() => {
+    if (!autoRun || pipelineStarted.current || !run || !client) return
+    pipelineStarted.current = true
+    if (!client.intake_form_link) {
+      setError('No intake form link on file for this client — add one on the Clients page first')
+      return
+    }
+    runFullPipeline()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun, run, client])
+
   async function runPhase4() {
     setBusy('phase4'); setError(null); setPlanSummary(null)
     try {
@@ -265,6 +353,46 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
       <button onClick={onBack} style={{ fontSize: 11, color: '#71717a', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 12 }}>← Back</button>
       <h1 style={{ fontSize: 16, fontWeight: 600, color: '#18181b', marginBottom: 16 }}>{run.client_slug}</h1>
 
+      {pipeline && (() => {
+        const statuses = PIPELINE_STEPS.map(s => pipeline[s.key])
+        const doneCount = statuses.filter(s => s === 'done' || s === 'error').length
+        const runningStep = PIPELINE_STEPS.find(s => pipeline[s.key] === 'running')
+        const failed = !runningStep && statuses.includes('error') && busy !== 'pipeline' && !!error
+        const complete = doneCount === PIPELINE_STEPS.length && !failed && busy !== 'pipeline'
+        const pct = Math.round((doneCount / PIPELINE_STEPS.length) * 100)
+        return (
+          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: failed ? '#dc2626' : complete ? '#16a34a' : '#18181b' }}>
+                {failed ? '✕ Pipeline stopped' : complete ? '✓ Pipeline complete — export saved below' : `${runningStep?.label ?? 'Starting'}…`}
+              </span>
+              <span style={{ fontSize: 11, color: '#94a3b8', fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
+            </div>
+            <div style={{ height: 6, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden', marginBottom: 12 }}>
+              <div style={{ height: '100%', width: `${pct}%`, background: failed ? '#dc2626' : complete ? '#16a34a' : '#2563eb', borderRadius: 99, transition: 'width .4s ease' }} />
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
+              {PIPELINE_STEPS.map(s => {
+                const st = pipeline[s.key]
+                const color = st === 'done' ? '#16a34a' : st === 'error' ? '#dc2626' : st === 'running' ? '#2563eb' : '#94a3b8'
+                const icon  = st === 'done' ? '✓' : st === 'error' ? '✕' : st === 'running' ? '…' : '○'
+                return (
+                  <span key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11 }}>
+                    <span style={{ color, fontWeight: 600 }}>{icon}</span>
+                    <span style={{ color: st === 'pending' ? '#94a3b8' : '#334155' }}>{s.label}</span>
+                  </span>
+                )
+              })}
+            </div>
+            {failed && error && (
+              <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginTop: 10 }}>
+                {error} — fix the issue, then use the tab buttons below to resume from the failed step.
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e2e8f0', marginBottom: 16 }}>
         {TABS.map(t => (
           <button
@@ -281,7 +409,7 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
         ))}
       </div>
 
-      {error && tab !== 'Intake' && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{error}</div>}
+      {error && tab !== 'Intake' && !pipeline && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{error}</div>}
 
       {tab === 'Intake' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -305,7 +433,7 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
           {/* Run Phase 1 button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
-              disabled={!client?.intake_form_link || busy === 'phase1'}
+              disabled={!client?.intake_form_link || !!busy}
               onClick={runPhase1}
               className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
             >
@@ -336,7 +464,7 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
             </div>
           )}
 
-          {error && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
+          {error && !pipeline && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
 
           {/* Results */}
           {run.intake && (
@@ -375,7 +503,7 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
-              disabled={!seeds || busy === 'phase2'}
+              disabled={!seeds || !!busy}
               onClick={runPhase2}
               className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
             >
@@ -445,7 +573,7 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
-              disabled={kwCount === 0 || busy === 'phase3'}
+              disabled={kwCount === 0 || !!busy}
               onClick={runPhase3}
               className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
             >
@@ -509,7 +637,7 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button
-              disabled={busy === 'phase4'}
+              disabled={!!busy}
               onClick={runPhase4}
               className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
             >
@@ -578,7 +706,7 @@ export default function RunWorkspace({ runId, onBack, initialTab }: { runId: num
             </div>
             <button
               onClick={generateExport}
-              disabled={busy === 'export'}
+              disabled={!!busy}
               className="text-[11px] font-medium px-3 h-8 rounded-[7px] bg-zinc-900 text-white disabled:opacity-40 flex items-center gap-1.5 shrink-0"
             >
               <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">

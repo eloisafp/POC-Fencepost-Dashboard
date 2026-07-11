@@ -91,6 +91,7 @@ export default function KeywordResearchPage() {
   const [clients, setClients]           = useState<MasterClient[]>([])
   const [client, setClient]             = useState<MasterClient | null>(null)
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null)
+  const [autoRunId, setAutoRunId]       = useState<number | null>(null)
   const [creating, setCreating]         = useState(false)
   const [showPrevious, setShowPrevious] = useState(false)
   const [allExports, setAllExports]     = useState<ExportRow[]>([])
@@ -112,7 +113,7 @@ export default function KeywordResearchPage() {
       .select('id')
       .single()
     setCreating(false)
-    if (!error && data) setSelectedRunId(data.id)
+    if (!error && data) { setAutoRunId(data.id); setSelectedRunId(data.id) }
   }
 
   // Global list: every saved export across ALL clients, newest first
@@ -130,7 +131,14 @@ export default function KeywordResearchPage() {
   }
 
   if (selectedRunId) {
-    return <RunWorkspace key={selectedRunId} runId={selectedRunId} onBack={() => setSelectedRunId(null)} />
+    return (
+      <RunWorkspace
+        key={selectedRunId}
+        runId={selectedRunId}
+        autoRun={selectedRunId === autoRunId}
+        onBack={() => setSelectedRunId(null)}
+      />
+    )
   }
 
   return (
