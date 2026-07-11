@@ -118,10 +118,7 @@ export default function KeywordResearchPage() {
     if (!error && data) { setAutoRunId(data.id); setSelectedRunId(data.id) }
   }
 
-  // Global list: every saved export across ALL clients, newest first
-  async function viewPrevious() {
-    setShowPrevious(s => !s)
-    if (showPrevious) return
+  async function loadAllExports() {
     setLoadingExports(true)
     const { data } = await supabase
       .from('keyword_pipeline_exports')
@@ -130,6 +127,23 @@ export default function KeywordResearchPage() {
       .limit(200)
     setAllExports((data || []) as unknown as ExportRow[])
     setLoadingExports(false)
+  }
+
+  // Global list: every saved export across ALL clients, newest first
+  async function viewPrevious() {
+    setShowPrevious(s => !s)
+    if (showPrevious) return
+    await loadAllExports()
+  }
+
+  async function deleteExport(exportId: number) {
+    if (!window.confirm('Delete this export file permanently? This cannot be undone.')) return
+    const res = await fetch('/api/keyword-pipeline/export/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ export_id: exportId }),
+    })
+    if (res.ok) await loadAllExports()
   }
 
   if (selectedRunId) {
@@ -236,17 +250,28 @@ export default function KeywordResearchPage() {
                   <span>{formatSize(e.size_bytes)}</span>
                 </div>
               </div>
-              <a
-                href={e.public_url ?? '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, height: 30, padding: '0 10px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, fontSize: 11, fontWeight: 500, color: '#0369a1', textDecoration: 'none', whiteSpace: 'nowrap' }}
-              >
-                <svg width="12" height="12" fill="none" stroke="#0284c7" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download
-              </a>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <a
+                  href={e.public_url ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, height: 30, padding: '0 10px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, fontSize: 11, fontWeight: 500, color: '#0369a1', textDecoration: 'none', whiteSpace: 'nowrap' }}
+                >
+                  <svg width="12" height="12" fill="none" stroke="#0284c7" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </a>
+                <button
+                  onClick={() => deleteExport(e.id)}
+                  title="Delete this export"
+                  style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, cursor: 'pointer', color: '#dc2626', flexShrink: 0 }}
+                >
+                  <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
             </div>
           ))}
         </div>
