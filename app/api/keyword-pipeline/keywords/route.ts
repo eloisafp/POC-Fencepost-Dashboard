@@ -11,12 +11,26 @@ import { ahrefsGet, todayStr, toDomain, intentLabel } from '../../../../lib/keyw
 //
 // Ahrefs charges API units per row * selected column, so limits below are deliberately
 // conservative. Raise them once a run has been validated end-to-end.
-const MATCHING_TERMS_LIMIT = 100 // per service (seeds batched into one call)
-const RELATED_TERMS_LIMIT = 50   // per service
-const ORGANIC_KEYWORDS_LIMIT = 200 // per competitor domain
-const TOP_PAGES_LIMIT = 100
+// TEST_MODE keeps a full run to roughly 4-6k Ahrefs units (vs ~25-35k full):
+// smaller row limits and no traffic_potential/top_keyword_volume columns
+// (each metric column costs ~10 units per row). Flip to false once the
+// process is validated and fuller keyword coverage is wanted.
+const TEST_MODE = true
+
+const MATCHING_TERMS_LIMIT = TEST_MODE ? 25 : 100 // per service (seeds batched into one call)
+const RELATED_TERMS_LIMIT = TEST_MODE ? 10 : 50   // per service
+const ORGANIC_KEYWORDS_LIMIT = TEST_MODE ? 40 : 200 // per competitor domain
+const TOP_PAGES_LIMIT = TEST_MODE ? 50 : 100
 const MIN_VOLUME = 10
 const COUNTRY = 'us'
+
+// keywords-explorer select: traffic_potential adds 10 units/row — skip in test mode
+const KE_SELECT = TEST_MODE
+  ? 'keyword,volume,difficulty,cpc,intents'
+  : 'keyword,volume,difficulty,cpc,traffic_potential,intents'
+const TOP_PAGES_SELECT = TEST_MODE
+  ? 'url,sum_traffic,keywords,top_keyword,top_keyword_best_position'
+  : 'url,sum_traffic,keywords,top_keyword,top_keyword_volume,top_keyword_best_position'
 
 export const maxDuration = 300
 
@@ -72,7 +86,7 @@ export async function POST(req: NextRequest) {
 
       try {
         const mt = await ahrefsGet('/keywords-explorer/matching-terms', {
-          select: 'keyword,volume,difficulty,cpc,traffic_potential,intents',
+          select: KE_SELECT,
           country: COUNTRY,
           keywords,
           limit: MATCHING_TERMS_LIMIT,
@@ -97,7 +111,7 @@ export async function POST(req: NextRequest) {
 
       try {
         const rt = await ahrefsGet('/keywords-explorer/related-terms', {
-          select: 'keyword,volume,difficulty,cpc,traffic_potential,intents',
+          select: KE_SELECT,
           country: COUNTRY,
           keywords,
           view_for: 'top_10',
@@ -129,7 +143,8 @@ export async function POST(req: NextRequest) {
       if (!comp.domain) continue
       try {
         const ok = await ahrefsGet('/site-explorer/organic-keywords', {
-          select: 'keyword,volume,keyword_difficulty,cpc,best_position,sum_traffic',
+          // sum_traffic was never stored — dropping it saves 10 units/row in every mode
+          select: 'keyword,volume,keyword_difficulty,cpc,best_position',
           target: comp.domain,
           mode: 'subdomains',
           country: COUNTRY,
@@ -169,7 +184,7 @@ export async function POST(req: NextRequest) {
     } else {
       try {
         const tp = await ahrefsGet('/site-explorer/top-pages', {
-          select: 'url,sum_traffic,keywords,top_keyword,top_keyword_volume,top_keyword_best_position',
+          select: TOP_PAGES_SELECT,
           target: clientDomain,
           mode: 'subdomains',
           country: COUNTRY,
