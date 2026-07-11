@@ -630,7 +630,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
               <div style={{ fontSize: 11, color: '#71717a', marginBottom: 6 }}>
                 Top {keywords.length} of {kwCount} by volume
               </div>
-              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+              <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', color: '#18181b' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
                     <th style={{ padding: '6px 8px' }}>Keyword</th>
@@ -648,8 +648,8 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
                       <td style={{ padding: '6px 8px', textAlign: 'right' }}>{k.monthly_volume?.toLocaleString() ?? '—'}</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right' }}>{k.kd ?? '—'}</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right' }}>{k.cpc != null ? `$${Number(k.cpc).toFixed(2)}` : '—'}</td>
-                      <td style={{ padding: '6px 8px', color: '#71717a' }}>{k.search_intent ?? '—'}</td>
-                      <td style={{ padding: '6px 8px', color: '#71717a' }}>{k.source ?? '—'}</td>
+                      <td style={{ padding: '6px 8px' }}>{k.search_intent ?? '—'}</td>
+                      <td style={{ padding: '6px 8px' }}>{k.source ?? '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -687,7 +687,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
             </div>
           )}
 
-          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', color: '#18181b' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
                 <th style={{ padding: '6px 8px' }}>Cluster</th>
@@ -705,7 +705,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
                   {clusters.map(c => (
                     <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                       <td style={{ padding: '6px 8px' }}>{c.label}</td>
-                      <td style={{ padding: '6px 8px', color: '#71717a' }}>{c.service_category ?? '—'}</td>
+                      <td style={{ padding: '6px 8px' }}>{c.service_category ?? '—'}</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.count}</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.totalVolume.toLocaleString()}</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right' }}>{c.avgKd != null ? Math.round(c.avgKd) : '—'}</td>
@@ -757,7 +757,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
             </div>
           )}
 
-        <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', color: '#18181b' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
               <th style={{ padding: '6px 8px' }}>Title</th>
