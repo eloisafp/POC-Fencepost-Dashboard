@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import RunWorkspace from './RunWorkspace'
 
 type MasterClient = { id: number; client_name: string; website_url: string }
+type Run = { id: number; client_slug: string; phase: string; created_at: string }
 
 const inp = 'w-full h-8 border border-gray-200 rounded-md px-3 text-xs text-gray-800 outline-none focus:ring-1 focus:ring-gray-400 bg-white placeholder-gray-300'
 
@@ -74,13 +75,16 @@ export default function KeywordResearchPage() {
   const [client, setClient]             = useState<MasterClient | null>(null)
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null)
   const [creating, setCreating]         = useState(false)
+  const [showPrevious, setShowPrevious] = useState(false)
+  const [runs, setRuns]                 = useState<Run[]>([])
+  const [loadingRuns, setLoadingRuns]   = useState(false)
 
   useEffect(() => {
     supabase.from('master_clients').select('id, client_name, website_url').order('client_name')
       .then(({ data }) => { if (data) setClients(data as MasterClient[]) })
   }, [])
 
-  useEffect(() => { setSelectedRunId(null) }, [client])
+  useEffect(() => { setSelectedRunId(null); setShowPrevious(false); setRuns([]) }, [client])
 
   async function createRun() {
     if (!client) return
@@ -92,6 +96,19 @@ export default function KeywordResearchPage() {
       .single()
     setCreating(false)
     if (!error && data) setSelectedRunId(data.id)
+  }
+
+  async function viewPrevious() {
+    if (!client) return
+    setShowPrevious(true)
+    setLoadingRuns(true)
+    const { data } = await supabase
+      .from('keyword_pipeline_runs')
+      .select('id, client_slug, phase, created_at')
+      .eq('master_client_id', client.id)
+      .order('created_at', { ascending: false })
+    setRuns((data || []) as Run[])
+    setLoadingRuns(false)
   }
 
   if (selectedRunId) {
@@ -114,7 +131,46 @@ export default function KeywordResearchPage() {
         >
           {creating ? 'Creating…' : '+ New run'}
         </button>
+        <button
+          onClick={viewPrevious}
+          disabled={!client}
+          className="text-xs px-3 h-8 rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-50 shrink-0"
+        >
+          View Previous
+        </button>
       </div>
+
+      {showPrevious && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 10 }}>
+            Previous runs for {client?.client_name}
+          </div>
+
+          {loadingRuns && <div style={{ fontSize: 12, color: '#94a3b8' }}>Loading…</div>}
+
+          {!loadingRuns && runs.length === 0 && (
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>No previous runs for this client yet.</div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {runs.map(run => (
+              <button
+                key={run.id}
+                onClick={() => setSelectedRunId(run.id)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', textAlign: 'left' }}
+              >
+                <span style={{ fontSize: 12, color: '#334155' }}>{run.client_slug}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                    {new Date(run.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                  <span style={{ fontSize: 10, color: '#71717a', textTransform: 'uppercase', letterSpacing: '.04em' }}>{run.phase}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -65,10 +65,10 @@ async function postJson(url: string, body: any) {
 type StepStatus = 'pending' | 'running' | 'done' | 'error'
 type Phase1Steps = { intake: StepStatus; guidelines: StepStatus; seeds: StepStatus; competitors: StepStatus }
 
-export default function RunWorkspace({ runId, onBack }: { runId: number; onBack: () => void }) {
+export default function RunWorkspace({ runId, onBack, initialTab }: { runId: number; onBack: () => void; initialTab?: Tab }) {
   const [run, setRun]       = useState<Run | null>(null)
   const [client, setClient] = useState<MasterClient | null>(null)
-  const [tab, setTab]       = useState<Tab>('Intake')
+  const [tab, setTab]       = useState<Tab>(initialTab ?? 'Intake')
   const [busy, setBusy]     = useState<string | null>(null)
   const [error, setError]   = useState<string | null>(null)
   const [seeds, setSeeds]   = useState<any>(null)
