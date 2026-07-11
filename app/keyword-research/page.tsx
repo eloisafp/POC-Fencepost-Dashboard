@@ -74,6 +74,7 @@ export default function KeywordResearchPage() {
   const [clients, setClients]           = useState<MasterClient[]>([])
   const [client, setClient]             = useState<MasterClient | null>(null)
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null)
+  const [openOnExports, setOpenOnExports] = useState(false)
   const [creating, setCreating]         = useState(false)
   const [showPrevious, setShowPrevious] = useState(false)
   const [runs, setRuns]                 = useState<Run[]>([])
@@ -95,7 +96,7 @@ export default function KeywordResearchPage() {
       .select('id')
       .single()
     setCreating(false)
-    if (!error && data) setSelectedRunId(data.id)
+    if (!error && data) { setOpenOnExports(false); setSelectedRunId(data.id) }
   }
 
   async function viewPrevious() {
@@ -112,7 +113,14 @@ export default function KeywordResearchPage() {
   }
 
   if (selectedRunId) {
-    return <RunWorkspace runId={selectedRunId} onBack={() => setSelectedRunId(null)} />
+    return (
+      <RunWorkspace
+        key={selectedRunId}
+        runId={selectedRunId}
+        initialTab={openOnExports ? 'View Exports' : undefined}
+        onBack={() => setSelectedRunId(null)}
+      />
+    )
   }
 
   return (
@@ -156,7 +164,7 @@ export default function KeywordResearchPage() {
             {runs.map(run => (
               <button
                 key={run.id}
-                onClick={() => setSelectedRunId(run.id)}
+                onClick={() => { setOpenOnExports(true); setSelectedRunId(run.id) }}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: 8, background: '#fff', cursor: 'pointer', textAlign: 'left' }}
               >
                 <span style={{ fontSize: 12, color: '#334155' }}>{run.client_slug}</span>
