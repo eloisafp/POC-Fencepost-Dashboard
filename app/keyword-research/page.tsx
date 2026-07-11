@@ -93,6 +93,7 @@ export default function KeywordResearchPage() {
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null)
   const [autoRunId, setAutoRunId]       = useState<number | null>(null)
   const [creating, setCreating]         = useState(false)
+  const [confirmOpen, setConfirmOpen]   = useState(false)
   const [showPrevious, setShowPrevious] = useState(false)
   const [allExports, setAllExports]     = useState<ExportRow[]>([])
   const [loadingExports, setLoadingExports] = useState(false)
@@ -106,6 +107,7 @@ export default function KeywordResearchPage() {
 
   async function createRun() {
     if (!client) return
+    setConfirmOpen(false)
     setCreating(true)
     const { data, error } = await supabase
       .from('keyword_pipeline_runs')
@@ -151,7 +153,7 @@ export default function KeywordResearchPage() {
           <ClientDropdown clients={clients} value={client} onChange={setClient} />
         </div>
         <button
-          onClick={createRun}
+          onClick={() => setConfirmOpen(true)}
           disabled={!client || creating}
           className="text-xs px-3 h-8 rounded-md bg-zinc-900 text-white disabled:opacity-50 shrink-0"
         >
@@ -164,6 +166,42 @@ export default function KeywordResearchPage() {
           {showPrevious ? 'Hide Exports' : 'View Previous'}
         </button>
       </div>
+
+      {confirmOpen && client && (
+        <div
+          onClick={() => setConfirmOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(24,24,27,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#fff', borderRadius: 12, padding: '20px 22px', width: 380, maxWidth: 'calc(100vw - 48px)', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}
+          >
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b', marginBottom: 6 }}>
+              Run full pipeline for {client.client_name}?
+            </div>
+            <div style={{ fontSize: 12, color: '#71717a', lineHeight: 1.5, marginBottom: 8 }}>
+              This runs all phases automatically — intake parsing, seed keywords, competitors, Ahrefs keyword fetch, AI clustering, content plan, and the Excel export.
+            </div>
+            <div style={{ fontSize: 11, color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '7px 10px', marginBottom: 16 }}>
+              Uses Ahrefs API units and OpenRouter credits. Make sure the client&apos;s intake form link is set on the Clients page.
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button
+                onClick={() => setConfirmOpen(false)}
+                className="text-xs px-3 h-8 rounded-md border border-gray-300 bg-white text-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={createRun}
+                className="text-xs px-3 h-8 rounded-md bg-zinc-900 text-white font-medium"
+              >
+                Yes, run pipeline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showPrevious && (
         <div style={{ marginTop: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
