@@ -39,7 +39,16 @@ export async function POST(req: NextRequest) {
     let content_guidelines = NO_GUIDELINES
     if (client.content_guidelines_url) {
       const text = await fetchGoogleDocText(client.content_guidelines_url)
-      content_guidelines = await callClaude(loadPrompt('guidelines-parser.md'), text)
+      // Placeholder docs ("NONE", "N/A", a blank page) have nothing to parse —
+      // and guidelines are optional, so a bad AI reply falls back instead of failing
+      const isPlaceholder = text.length < 30 || /^(none|n\/?a|no( content)? guidelines)\.?$/i.test(text.trim())
+      if (!isPlaceholder) {
+        try {
+          content_guidelines = await callClaude(loadPrompt('guidelines-parser.md'), text)
+        } catch (e) {
+          console.warn('keyword-pipeline/guidelines: parse failed, saving has_guidelines:false —', e)
+        }
+      }
     }
 
     const { error: updateError } = await sb
