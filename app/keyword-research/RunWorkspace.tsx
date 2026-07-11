@@ -204,10 +204,11 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
     if (tab === 'View Exports') loadExports()
   }, [tab, runId, loadKeywords, loadClusters, loadExports])
 
-  async function generateExport() {
-    setBusy('export'); setError(null)
+  async function deleteExport(exportId: number) {
+    if (!window.confirm('Delete this export file permanently? This cannot be undone.')) return
+    setBusy('delete-export'); setError(null)
     try {
-      await postJson('/api/keyword-pipeline/export/save', { run_id: runId })
+      await postJson('/api/keyword-pipeline/export/delete', { export_id: exportId })
       await loadExports()
     } catch (e: any) {
       setError(e.message)
@@ -798,16 +799,6 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
               </svg>
               <span>Run for <strong style={{ color: '#52525b', fontWeight: 600 }}>{run.client_slug}</strong> &nbsp;·&nbsp; {exports.length} saved export{exports.length === 1 ? '' : 's'}</span>
             </div>
-            <button
-              onClick={generateExport}
-              disabled={!!busy}
-              className="text-[11px] font-medium px-3 h-8 rounded-[7px] bg-zinc-900 text-white disabled:opacity-40 flex items-center gap-1.5 shrink-0"
-            >
-              <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-              {busy === 'export' ? 'Generating…' : 'Generate New Export'}
-            </button>
           </div>
 
           <div style={{ padding: '10px 20px 8px', fontSize: 10, fontWeight: 600, color: '#94a3b8', letterSpacing: '.06em', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9' }}>
@@ -839,22 +830,34 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
                     : <span style={{ padding: '1px 7px', borderRadius: 99, fontSize: 10, fontWeight: 500, background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d' }}>Saved</span>}
                 </div>
               </div>
-              <a
-                href={e.public_url ?? '#'}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, height: 30, padding: '0 10px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, fontSize: 11, fontWeight: 500, color: '#0369a1', textDecoration: 'none', whiteSpace: 'nowrap' }}
-              >
-                <svg width="12" height="12" fill="none" stroke="#0284c7" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Download
-              </a>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <a
+                  href={e.public_url ?? '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, height: 30, padding: '0 10px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 6, fontSize: 11, fontWeight: 500, color: '#0369a1', textDecoration: 'none', whiteSpace: 'nowrap' }}
+                >
+                  <svg width="12" height="12" fill="none" stroke="#0284c7" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </a>
+                <button
+                  onClick={() => deleteExport(e.id)}
+                  disabled={!!busy}
+                  title="Delete this export"
+                  style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, cursor: 'pointer', color: '#dc2626', flexShrink: 0 }}
+                >
+                  <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
             </div>
           ))}
 
           <div style={{ padding: '12px 20px', fontSize: 11, color: '#94a3b8', borderTop: '1px solid #f1f5f9', lineHeight: 1.5 }}>
-            Each export is saved to Supabase Storage and linked to this run. <span style={{ color: '#52525b', fontWeight: 500 }}>Generate New Export</span> adds a new version — existing ones are never overwritten.
+            Each export is saved to Supabase Storage and linked to this run. A new export is saved automatically at the end of every pipeline run.
           </div>
         </div>
       )}
