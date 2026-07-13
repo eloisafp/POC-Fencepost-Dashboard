@@ -163,7 +163,8 @@ export async function POST(req: NextRequest) {
           country: COUNTRY,
           date,
           limit: ORGANIC_KEYWORDS_LIMIT,
-          order_by: 'sum_traffic_merged:desc',
+          // order_by must use a selected column — sum_traffic was dropped from select
+          order_by: 'volume:desc',
           where: JSON.stringify({
             and: [
               { field: 'volume', is: ['gte', MIN_VOLUME] },
@@ -203,7 +204,7 @@ export async function POST(req: NextRequest) {
           country: COUNTRY,
           date,
           limit: TOP_PAGES_LIMIT,
-          order_by: 'sum_traffic_merged:desc',
+          order_by: 'sum_traffic:desc',
         })
         existingPages = (tp.pages || []).filter((p: any) => p.url).map((p: any) => ({
           url: p.url,

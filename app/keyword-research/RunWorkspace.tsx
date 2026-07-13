@@ -63,7 +63,6 @@ async function postJson(url: string, body: any) {
 }
 
 type StepStatus = 'pending' | 'running' | 'done' | 'error'
-type Phase1Steps = { intake: StepStatus; guidelines: StepStatus; seeds: StepStatus; competitors: StepStatus }
 
 const PIPELINE_STEPS = [
   { key: 'intake',      label: 'Parsing intake form' },
@@ -84,10 +83,11 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
   const [busy, setBusy]     = useState<string | null>(null)
   const [error, setError]   = useState<string | null>(null)
   const [seeds, setSeeds]   = useState<any>(null)
-  const [phase1Steps, setPhase1Steps] = useState<Phase1Steps>({ intake: 'pending', guidelines: 'pending', seeds: 'pending', competitors: 'pending' })
   const [pipeline, setPipeline] = useState<Record<PipelineKey, StepStatus> | null>(null)
   const pipelineStarted = useRef(false)
   const [creditsError, setCreditsError] = useState<string | null>(null)
+  const stopRequested = useRef(false)
+  const [stopping, setStopping] = useState(false)
 
   // Manual competitor entry: when intake yields no usable competitors, the run
   // pauses on a dialog until the user submits 1-10 competitors (or skips)
@@ -217,73 +217,39 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
     setBusy(null)
   }
 
-  async function runPhase1() {
-    if (!client?.intake_form_link) return
-    setBusy('phase1'); setError(null)
-    setPhase1Steps({ intake: 'pending', guidelines: 'pending', seeds: 'pending', competitors: 'pending' })
-
-    let currentRun = run!
-    let currentSeeds: any = null
-
-    // Step 1 — intake
-    setPhase1Steps(s => ({ ...s, intake: 'running' }))
-    try {
-      const r = await postJson('/api/keyword-pipeline/intake', { run_id: runId })
-      currentRun = { ...currentRun, intake: r.intake }
-      setRun(currentRun)
-      setPhase1Steps(s => ({ ...s, intake: 'done' }))
-    } catch (e: any) {
-      setPhase1Steps(s => ({ ...s, intake: 'error' }))
-      setError(`Intake: ${e.message}`)
-      setBusy(null); return
-    }
-
-    // Step 2 — guidelines (optional, never blocks)
-    setPhase1Steps(s => ({ ...s, guidelines: 'running' }))
-    try {
-      const r = await postJson('/api/keyword-pipeline/guidelines', { run_id: runId })
-      currentRun = { ...currentRun, content_guidelines: r.content_guidelines }
-      setRun(currentRun)
-      setPhase1Steps(s => ({ ...s, guidelines: 'done' }))
-    } catch {
-      setPhase1Steps(s => ({ ...s, guidelines: 'error' }))
-    }
-
-    // Step 3 — seeds
-    setPhase1Steps(s => ({ ...s, seeds: 'running' }))
-    try {
-      const r = await postJson('/api/keyword-pipeline/seeds', { run_id: runId })
-      currentSeeds = r.seeds
-      setSeeds(currentSeeds)
-      setPhase1Steps(s => ({ ...s, seeds: 'done' }))
-    } catch (e: any) {
-      setPhase1Steps(s => ({ ...s, seeds: 'error' }))
-      setError(`Seeds: ${e.message}`)
-      setBusy(null); return
-    }
-
-    // Step 4 — competitors
-    setPhase1Steps(s => ({ ...s, competitors: 'running' }))
-    try {
-      const r = await postJson('/api/keyword-pipeline/competitors', { run_id: runId, seeds: currentSeeds })
-      const finalComps = await ensureCompetitors(r.competitors)
-      currentRun = { ...currentRun, competitors: finalComps }
-      setRun(currentRun)
-      setPhase1Steps(s => ({ ...s, competitors: 'done' }))
-    } catch (e: any) {
-      setPhase1Steps(s => ({ ...s, competitors: 'error' }))
-      setError(`Competitors: ${e.message}`)
-    }
-
-    setBusy(null)
-  }
-
+  // Resume-aware: skips steps whose output is already saved in the database,
+  // so after a failure (or Stop) the same button continues from where it left
+  // off. When every step is already complete, it re-runs everything fresh.
   async function runFullPipeline() {
     setBusy('pipeline'); setError(null)
-    setPipeline(Object.fromEntries(PIPELINE_STEPS.map(s => [s.key, 'pending'])) as Record<PipelineKey, StepStatus>)
+    stopRequested.current = false
+    setStopping(false)
+
+    // What's already done for this run?
+    const [{ data: r }, kw, cl, it, ex] = await Promise.all([
+      supabase.from('keyword_pipeline_runs').select('intake, seeds, competitors, content_guidelines').eq('id', runId).single(),
+      supabase.from('keyword_pipeline_keywords').select('id', { count: 'exact', head: true }).eq('run_id', runId),
+      supabase.from('keyword_pipeline_clusters').select('id', { count: 'exact', head: true }).eq('run_id', runId),
+      supabase.from('keyword_pipeline_content_plan_items').select('id', { count: 'exact', head: true }).eq('run_id', runId),
+      supabase.from('keyword_pipeline_exports').select('id', { count: 'exact', head: true }).eq('run_id', runId),
+    ])
+    const done: Record<PipelineKey, boolean> = {
+      intake: !!r?.intake,
+      guidelines: r?.content_guidelines != null,
+      seeds: !!r?.seeds,
+      competitors: !!r?.competitors,
+      keywords: (kw.count ?? 0) > 0,
+      cluster: (cl.count ?? 0) > 0,
+      plan: (it.count ?? 0) > 0,
+      export: (ex.count ?? 0) > 0,
+    }
+    // Everything finished already -> this click means "re-run all"
+    if (PIPELINE_STEPS.every(s => done[s.key])) PIPELINE_STEPS.forEach(s => { done[s.key] = false })
+
+    setPipeline(Object.fromEntries(PIPELINE_STEPS.map(s => [s.key, done[s.key] ? 'done' : 'pending'])) as Record<PipelineKey, StepStatus>)
     const mark = (k: PipelineKey, s: StepStatus) => setPipeline(p => (p ? { ...p, [k]: s } : p))
 
-    let currentSeeds: any = null
+    let currentSeeds: any = r?.seeds ?? null
     const steps: { key: PipelineKey; optional?: boolean; fn: () => Promise<void> }[] = [
       { key: 'intake', fn: async () => {
         const r = await postJson('/api/keyword-pipeline/intake', { run_id: runId })
@@ -321,6 +287,13 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
     ]
 
     for (const s of steps) {
+      if (done[s.key]) continue
+      if (stopRequested.current) {
+        setError('Pipeline stopped by user — click Run / Resume to continue from this step.')
+        setBusy(null)
+        setStopping(false)
+        return
+      }
       mark(s.key, 'running')
       try {
         await s.fn()
@@ -354,52 +327,33 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoRun, run, client])
 
-  async function runPhase4() {
-    setBusy('phase4'); setError(null); setPlanSummary(null)
-    try {
-      const r = await postJson('/api/keyword-pipeline/content-plan', { run_id: runId })
-      setPlanSummary(r)
-      setRun(prev => prev ? { ...prev, phase: 'content_plan' } : prev)
-      const { data } = await supabase.from('keyword_pipeline_content_plan_items').select('*').eq('run_id', runId)
-      setItems((data || []) as ContentPlanItem[])
-    } catch (e: any) {
-      setError(e.message)
-    }
-    setBusy(null)
-  }
-
-  async function runPhase3() {
-    setBusy('phase3'); setError(null)
-    try {
-      await postJson('/api/keyword-pipeline/cluster', { run_id: runId })
-      setRun(prev => prev ? { ...prev, phase: 'clusters' } : prev)
-      await loadClusters()
-    } catch (e: any) {
-      setError(e.message)
-    }
-    setBusy(null)
-  }
-
-  async function runPhase2() {
-    setBusy('phase2'); setError(null); setKwSummary(null)
-    try {
-      const r = await postJson('/api/keyword-pipeline/keywords', { run_id: runId })
-      setKwSummary(r)
-      setRun(prev => prev ? { ...prev, phase: 'keywords' } : prev)
-      await loadKeywords()
-    } catch (e: any) {
-      if (e.message?.includes('Not enough Ahrefs API units')) setCreditsError(e.message)
-      setError(e.message)
-    }
-    setBusy(null)
-  }
-
   if (!run) return <div style={{ padding: 24, fontSize: 12, color: '#94a3b8' }}>Loading…</div>
 
   return (
     <div style={{ padding: 24, maxWidth: 860, margin: '0 auto' }}>
       <button onClick={onBack} style={{ fontSize: 11, color: '#71717a', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 12 }}>← Back</button>
-      <h1 style={{ fontSize: 16, fontWeight: 600, color: '#18181b', marginBottom: 16 }}>{run.client_slug}</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+        <h1 style={{ fontSize: 16, fontWeight: 600, color: '#18181b', margin: 0 }}>{run.client_slug}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {busy === 'pipeline' ? (
+            <button
+              onClick={() => { stopRequested.current = true; setStopping(true) }}
+              disabled={stopping}
+              className="text-xs px-4 h-8 rounded-md border border-red-300 bg-red-50 text-red-600 font-medium disabled:opacity-60"
+            >
+              {stopping ? 'Stopping after current step…' : '■ Stop'}
+            </button>
+          ) : (
+            <button
+              onClick={runFullPipeline}
+              disabled={!!busy || !client?.intake_form_link}
+              className="text-xs px-4 h-8 rounded-md bg-zinc-900 text-white font-medium disabled:opacity-40"
+            >
+              ▶ Run / Resume pipeline
+            </button>
+          )}
+        </div>
+      </div>
 
       {pipeline && (() => {
         const statuses = PIPELINE_STEPS.map(s => pipeline[s.key])
@@ -434,7 +388,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
             </div>
             {failed && error && (
               <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginTop: 10 }}>
-                {error} — fix the issue, then use the tab buttons below to resume from the failed step.
+                {error} — fix the issue, then click Run / Resume pipeline to continue from the failed step.
               </div>
             )}
           </div>
@@ -567,39 +521,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
             </div>
           </div>
 
-          {/* Run Phase 1 button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              disabled={!client?.intake_form_link || !!busy}
-              onClick={runPhase1}
-              className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
-            >
-              {busy === 'phase1' ? 'Running…' : run.intake ? '↺ Re-run Phase 1' : '▶ Run Phase 1'}
-            </button>
-            {!client?.intake_form_link && <span style={{ fontSize: 11, color: '#f87171' }}>Intake form link required</span>}
-          </div>
-
-          {/* Step progress (visible once started) */}
-          {(busy === 'phase1' || phase1Steps.intake !== 'pending') && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {([
-                { key: 'intake',      label: 'Parse Intake' },
-                { key: 'guidelines',  label: 'Parse Guidelines' },
-                { key: 'seeds',       label: 'Generate Seeds' },
-                { key: 'competitors', label: 'Resolve Competitors' },
-              ] as { key: keyof Phase1Steps; label: string }[]).map(({ key, label }) => {
-                const s = phase1Steps[key]
-                const color = s === 'done' ? '#16a34a' : s === 'error' ? '#dc2626' : s === 'running' ? '#2563eb' : '#94a3b8'
-                const icon  = s === 'done' ? '✓' : s === 'error' ? '✕' : s === 'running' ? '…' : '○'
-                return (
-                  <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
-                    <span style={{ color, fontWeight: 600, width: 14, textAlign: 'center' }}>{icon}</span>
-                    <span style={{ color: s === 'pending' ? '#94a3b8' : '#18181b' }}>{label}</span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+          {!client?.intake_form_link && <div style={{ fontSize: 12, color: '#f87171' }}>Intake form link required — add it on the Clients page, then click Run / Resume pipeline above.</div>}
 
           {error && !pipeline && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6 }}>{error}</div>}
 
@@ -620,23 +542,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
 
       {tab === 'Keywords' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              disabled={!seeds || !!busy}
-              onClick={runPhase2}
-              className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
-            >
-              {busy === 'phase2' ? 'Fetching from Ahrefs… (takes a minute)' : kwCount > 0 ? '↺ Re-run Phase 2' : '▶ Run Phase 2 — Fetch Keywords'}
-            </button>
-            {!seeds && <span style={{ fontSize: 11, color: '#f87171' }}>Run Phase 1 first — seeds are required</span>}
-            {kwCount > 0 && busy !== 'phase2' && <span style={{ fontSize: 11, color: '#71717a' }}>{kwCount} keywords stored</span>}
-          </div>
-
-          {busy === 'phase2' && (
-            <div style={{ fontSize: 12, color: '#2563eb', background: '#eff6ff', padding: '8px 12px', borderRadius: 6 }}>
-              Running 3 jobs: seed expansion → competitor gap → site audit. Re-running replaces previous keywords for this run.
-            </div>
-          )}
+          {kwCount > 0 && <div style={{ fontSize: 11, color: '#71717a' }}>{kwCount} keywords stored</div>}
 
           {kwSummary && (
             <div style={{ fontSize: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 12px', borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -682,33 +588,17 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
             </div>
           )}
 
-          {keywords.length === 0 && busy !== 'phase2' && (
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>No keywords yet — run Phase 2 to fetch from Ahrefs.</div>
+          {keywords.length === 0 && (
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>No keywords yet — click Run / Resume pipeline above.</div>
           )}
         </div>
       )}
 
       {tab === 'Clusters' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              disabled={kwCount === 0 || !!busy}
-              onClick={runPhase3}
-              className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
-            >
-              {busy === 'phase3' ? 'Clustering with AI…' : clusters.length > 0 ? '↺ Re-run Phase 3' : '▶ Run Phase 3 — Cluster Keywords'}
-            </button>
-            {kwCount === 0 && <span style={{ fontSize: 11, color: '#f87171' }}>Run Phase 2 first — keywords are required</span>}
-            {clusters.length > 0 && busy !== 'phase3' && (
-              <span style={{ fontSize: 11, color: '#71717a' }}>
-                {clusters.length} clusters · {kwCount - unclustered} of {kwCount} keywords assigned
-              </span>
-            )}
-          </div>
-
-          {busy === 'phase3' && (
-            <div style={{ fontSize: 12, color: '#2563eb', background: '#eff6ff', padding: '8px 12px', borderRadius: 6 }}>
-              Claude is filtering and clustering {kwCount} keywords — this takes a minute. Re-running replaces existing clusters.
+          {clusters.length > 0 && (
+            <div style={{ fontSize: 11, color: '#71717a' }}>
+              {clusters.length} clusters · {kwCount - unclustered} of {kwCount} keywords assigned
             </div>
           )}
 
@@ -754,22 +644,7 @@ export default function RunWorkspace({ runId, onBack, initialTab, autoRun }: { r
 
       {tab === 'Content Plan' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button
-              disabled={!!busy}
-              onClick={runPhase4}
-              className="text-xs px-4 py-2 rounded-md bg-zinc-900 text-white disabled:opacity-40 font-medium"
-            >
-              {busy === 'phase4' ? 'Generating content plan…' : items.length > 0 ? '↺ Re-run Phase 4' : '▶ Run Phase 4 — Generate Content Plan'}
-            </button>
-            {items.length > 0 && busy !== 'phase4' && <span style={{ fontSize: 11, color: '#71717a' }}>{items.length} items</span>}
-          </div>
-
-          {busy === 'phase4' && (
-            <div style={{ fontSize: 12, color: '#2563eb', background: '#eff6ff', padding: '8px 12px', borderRadius: 6 }}>
-              Generating: blog topics per cluster (AI) → location pages (services × areas) → audit vs existing pages. Re-running replaces the current plan.
-            </div>
-          )}
+          {items.length > 0 && <div style={{ fontSize: 11, color: '#71717a' }}>{items.length} items</div>}
 
           {planSummary && (
             <div style={{ fontSize: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '10px 12px', borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
