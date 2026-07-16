@@ -136,21 +136,21 @@ function segToParas(seg: Seg): Paragraph[] {
   switch (seg.k) {
     case 'meta':
       return [new Paragraph({
-        children: [new TextRun({ text: seg.text, font: 'Arial', size: 22, color: '475569' })],
+        children: [new TextRun({ text: seg.text, font: 'Inter Tight', size: 22, color: '000000' })],
         spacing: { before: 0, after: 80 },
       })]
 
     case 'h1':
       return [new Paragraph({
         heading: HeadingLevel.HEADING_1,
-        children: [new TextRun({ text: seg.text, bold: true, font: 'Arial', size: 36 })],
+        children: [new TextRun({ text: seg.text, bold: true, font: 'Inter Tight', size: 36 })],
         spacing: { before: 200, after: 200 },
       })]
 
     case 'h2':
       return [new Paragraph({
         heading: HeadingLevel.HEADING_2,
-        children: [new TextRun({ text: seg.text, bold: true, font: 'Arial', size: 28 })],
+        children: [new TextRun({ text: seg.text, bold: true, font: 'Inter Tight', size: 28 })],
         spacing: { before: 400, after: 120 },
         border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E2E8F0', space: 4 } },
       })]
@@ -158,20 +158,20 @@ function segToParas(seg: Seg): Paragraph[] {
     case 'h3':
       return [new Paragraph({
         heading: HeadingLevel.HEADING_3,
-        children: [new TextRun({ text: seg.text, bold: true, font: 'Arial', size: 24 })],
+        children: [new TextRun({ text: seg.text, bold: true, font: 'Inter Tight', size: 24 })],
         spacing: { before: 240, after: 80 },
       })]
 
     case 'p':
       return [new Paragraph({
-        children: inlinesToChildren(seg.inlines, { font: 'Arial', size: 24 }),
+        children: inlinesToChildren(seg.inlines, { font: 'Inter Tight', size: 24 }),
         spacing: { before: 0, after: 160 },
       })]
 
     case 'list':
       return seg.items.map(inlines => new Paragraph({
         numbering: { reference: 'bullets', level: 0 },
-        children: inlinesToChildren(inlines, { font: 'Arial', size: 24 }),
+        children: inlinesToChildren(inlines, { font: 'Inter Tight', size: 24 }),
         spacing: { before: 60, after: 60 },
       }))
   }
@@ -204,21 +204,21 @@ export async function POST(req: Request) {
       }],
     },
     styles: {
-      default: { document: { run: { font: 'Arial', size: 24 } } },
+      default: { document: { run: { font: 'Inter Tight', size: 24, color: '000000' } } },
       paragraphStyles: [
         {
           id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run:       { size: 36, bold: true, font: 'Arial', color: '0F172A' },
+          run:       { size: 36, bold: true, font: 'Inter Tight', color: '000000' },
           paragraph: { spacing: { before: 0, after: 200 }, outlineLevel: 0 },
         },
         {
           id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run:       { size: 28, bold: true, font: 'Arial', color: '1E293B' },
+          run:       { size: 28, bold: true, font: 'Inter Tight', color: '000000' },
           paragraph: { spacing: { before: 400, after: 120 }, outlineLevel: 1 },
         },
         {
           id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run:       { size: 24, bold: true, font: 'Arial', color: '334155' },
+          run:       { size: 24, bold: true, font: 'Inter Tight', color: '000000' },
           paragraph: { spacing: { before: 240, after: 80 }, outlineLevel: 2 },
         },
       ],
@@ -234,9 +234,9 @@ export async function POST(req: Request) {
         // ── Review banner ────────────────────────────────────────────────────
         new Paragraph({
           children: [
-            new TextRun({ text: (companyName || '').toUpperCase(), font: 'Arial', size: 28, bold: true, color: '18391A' }),
-            new TextRun({ text: '  |  Blog for Review  |  ', font: 'Arial', size: 28, color: '18391A' }),
-            new TextRun({ text: reviewDate, font: 'Arial', size: 28, color: '18391A' }),
+            new TextRun({ text: (companyName || '').toUpperCase(), font: 'Inter Tight', size: 28, bold: true, color: '000000' }),
+            new TextRun({ text: '  |  Blog for Review  |  ', font: 'Inter Tight', size: 28, color: '000000' }),
+            new TextRun({ text: reviewDate, font: 'Inter Tight', size: 28, color: '000000' }),
           ],
           spacing: { after: 160 },
           border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E2E8F0', space: 4 } },

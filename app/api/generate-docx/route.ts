@@ -42,7 +42,7 @@ function blockToDocx(b: Block): (Paragraph | Table)[] {
     case 'h1':
       return [new Paragraph({
         heading: HeadingLevel.HEADING_1,
-        children: [new TextRun({ text: b.text, bold: true, font: 'Arial', size: 36 })],
+        children: [new TextRun({ text: b.text, bold: true, font: 'Inter Tight', size: 36 })],
         spacing: { before: 0, after: 200 },
       })]
 
@@ -50,7 +50,7 @@ function blockToDocx(b: Block): (Paragraph | Table)[] {
       return [
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
-          children: [new TextRun({ text: b.text, bold: true, font: 'Arial', size: 28 })],
+          children: [new TextRun({ text: b.text, bold: true, font: 'Inter Tight', size: 28 })],
           spacing: { before: 400, after: 120 },
           border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E2E8F0', space: 4 } },
         }),
@@ -59,20 +59,20 @@ function blockToDocx(b: Block): (Paragraph | Table)[] {
     case 'h3':
       return [new Paragraph({
         heading: HeadingLevel.HEADING_3,
-        children: [new TextRun({ text: b.text, bold: true, font: 'Arial', size: 24 })],
+        children: [new TextRun({ text: b.text, bold: true, font: 'Inter Tight', size: 24 })],
         spacing: { before: 240, after: 80 },
       })]
 
     case 'paragraph':
       return [new Paragraph({
-        children: [new TextRun({ text: b.text, font: 'Arial', size: 24 })],
+        children: [new TextRun({ text: b.text, font: 'Inter Tight', size: 24 })],
         spacing: { before: 0, after: 160 },
       })]
 
     case 'list':
       return b.items.map(item => new Paragraph({
         numbering: { reference: 'bullets', level: 0 },
-        children: [new TextRun({ text: item, font: 'Arial', size: 24 })],
+        children: [new TextRun({ text: item, font: 'Inter Tight', size: 24 })],
         spacing: { before: 60, after: 60 },
       }))
 
@@ -80,13 +80,13 @@ function blockToDocx(b: Block): (Paragraph | Table)[] {
       return [
         new Paragraph({
           children: [
-            new TextRun({ text: `Step ${b.number}: `, bold: true, font: 'Arial', size: 24, color: '18181B' }),
-            new TextRun({ text: b.title, bold: true, font: 'Arial', size: 24, color: '18181B' }),
+            new TextRun({ text: `Step ${b.number}: `, bold: true, font: 'Inter Tight', size: 24, color: '000000' }),
+            new TextRun({ text: b.title, bold: true, font: 'Inter Tight', size: 24, color: '000000' }),
           ],
           spacing: { before: 240, after: 80 },
         }),
         new Paragraph({
-          children: [new TextRun({ text: b.body, font: 'Arial', size: 24, color: '475569' })],
+          children: [new TextRun({ text: b.body, font: 'Inter Tight', size: 24, color: '000000' })],
           indent: { left: 360 },
           spacing: { before: 0, after: 160 },
         }),
@@ -96,19 +96,19 @@ function blockToDocx(b: Block): (Paragraph | Table)[] {
       return [
         new Paragraph({
           heading: HeadingLevel.HEADING_3,
-          children: [new TextRun({ text: b.question, bold: true, font: 'Arial', size: 24, color: '334155' })],
+          children: [new TextRun({ text: b.question, bold: true, font: 'Inter Tight', size: 24, color: '000000' })],
           spacing: { before: 240, after: 80 },
           border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'E2E8F0', space: 4 } },
         }),
         new Paragraph({
-          children: [new TextRun({ text: b.answer, font: 'Arial', size: 24, color: '64748B' })],
+          children: [new TextRun({ text: b.answer, font: 'Inter Tight', size: 24, color: '000000' })],
           spacing: { before: 0, after: 160 },
         }),
       ]
 
     case 'cta':
       return [new Paragraph({
-        children: [new TextRun({ text: `→ ${b.text}`, bold: true, font: 'Arial', size: 24, color: '18181B' })],
+        children: [new TextRun({ text: `→ ${b.text}`, bold: true, font: 'Inter Tight', size: 24, color: '000000' })],
         spacing: { before: 200, after: 200 },
         shading: { fill: 'F8FAFC', type: ShadingType.CLEAR },
         border: {
@@ -123,7 +123,7 @@ function blockToDocx(b: Block): (Paragraph | Table)[] {
       const isHtmlEmbed = b.caption.trim().startsWith('<')
       const label = isHtmlEmbed ? '[ HTML Embed — view in browser ]' : `📷  ${b.caption}`
       return [new Paragraph({
-        children: [new TextRun({ text: label, font: 'Arial', size: 22, color: isHtmlEmbed ? '6366F1' : '94A3B8', italics: !isHtmlEmbed })],
+        children: [new TextRun({ text: label, font: 'Inter Tight', size: 22, color: '000000', italics: !isHtmlEmbed })],
         alignment: AlignmentType.CENTER,
         spacing: { before: 200, after: 200 },
         shading: { fill: isHtmlEmbed ? 'EEF2FF' : 'F1F5F9', type: ShadingType.CLEAR },
@@ -189,8 +189,8 @@ function seoMetaBlock(seo: SEOMeta): Paragraph[] {
   function metaLine(label: string, value: string): Paragraph {
     return new Paragraph({
       children: [
-        new TextRun({ text: `${label}: `, font: 'Arial', size: 22, bold: true, color: '334155' }),
-        new TextRun({ text: value || '—', font: 'Arial', size: 22, color: '475569' }),
+        new TextRun({ text: `${label}: `, font: 'Inter Tight', size: 22, bold: true, color: '000000' }),
+        new TextRun({ text: value || '—', font: 'Inter Tight', size: 22, color: '000000' }),
       ],
       spacing: { before: 0, after: 80 },
     })
@@ -227,22 +227,22 @@ export async function POST(req: Request) {
     },
     styles: {
       default: {
-        document: { run: { font: 'Arial', size: 24 } },
+        document: { run: { font: 'Inter Tight', size: 24, color: '000000' } },
       },
       paragraphStyles: [
         {
           id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run:       { size: 36, bold: true, font: 'Arial', color: '0F172A' },
+          run:       { size: 36, bold: true, font: 'Inter Tight', color: '000000' },
           paragraph: { spacing: { before: 0, after: 200 }, outlineLevel: 0 },
         },
         {
           id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run:       { size: 28, bold: true, font: 'Arial', color: '1E293B' },
+          run:       { size: 28, bold: true, font: 'Inter Tight', color: '000000' },
           paragraph: { spacing: { before: 400, after: 120 }, outlineLevel: 1 },
         },
         {
           id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true,
-          run:       { size: 24, bold: true, font: 'Arial', color: '334155' },
+          run:       { size: 24, bold: true, font: 'Inter Tight', color: '000000' },
           paragraph: { spacing: { before: 240, after: 80 }, outlineLevel: 2 },
         },
       ],
@@ -258,10 +258,10 @@ export async function POST(req: Request) {
         // ── Review banner ──────────────────────────────────────────────────
         new Paragraph({
           children: [
-            new TextRun({ text: form.companyName.toUpperCase(), font: 'Arial', size: 28, bold: true, color: '18391A' }),
-            new TextRun({ text: ` - ${[form.service, form.city].filter(Boolean).join(' ')}`, font: 'Arial', size: 28, bold: true, color: '18391A' }),
-            new TextRun({ text: '  |  Page For Review  |  ', font: 'Arial', size: 28, color: '18391A' }),
-            new TextRun({ text: reviewDate, font: 'Arial', size: 28, color: '18391A' }),
+            new TextRun({ text: form.companyName.toUpperCase(), font: 'Inter Tight', size: 28, bold: true, color: '000000' }),
+            new TextRun({ text: ` - ${[form.service, form.city].filter(Boolean).join(' ')}`, font: 'Inter Tight', size: 28, bold: true, color: '000000' }),
+            new TextRun({ text: '  |  Page For Review  |  ', font: 'Inter Tight', size: 28, color: '000000' }),
+            new TextRun({ text: reviewDate, font: 'Inter Tight', size: 28, color: '000000' }),
           ],
           spacing: { after: 160 },
           border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E2E8F0', space: 4 } },
