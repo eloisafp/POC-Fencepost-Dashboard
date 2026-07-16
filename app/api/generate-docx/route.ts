@@ -258,10 +258,10 @@ export async function POST(req: Request) {
         // ── Review banner ──────────────────────────────────────────────────
         new Paragraph({
           children: [
-            new TextRun({ text: form.companyName.toUpperCase(), font: 'Inter Tight', size: 28, bold: true, color: '000000' }),
-            new TextRun({ text: ` - ${[form.service, form.city].filter(Boolean).join(' ')}`, font: 'Inter Tight', size: 28, bold: true, color: '000000' }),
-            new TextRun({ text: '  |  Page For Review  |  ', font: 'Inter Tight', size: 28, color: '000000' }),
-            new TextRun({ text: reviewDate, font: 'Inter Tight', size: 28, color: '000000' }),
+            new TextRun({ text: form.companyName.toUpperCase(), font: 'Inter Tight', size: 36, bold: true, color: '000000' }),
+            new TextRun({ text: ` - ${[form.service, form.city].filter(Boolean).join(' ')}`, font: 'Inter Tight', size: 36, bold: true, color: '000000' }),
+            new TextRun({ text: '  |  Page For Review  |  ', font: 'Inter Tight', size: 36, color: '000000' }),
+            new TextRun({ text: reviewDate, font: 'Inter Tight', size: 36, color: '000000' }),
           ],
           spacing: { after: 160 },
           border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'E2E8F0', space: 4 } },
