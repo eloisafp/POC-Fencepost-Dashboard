@@ -203,8 +203,8 @@ export default function GbpPostingPage() {
       const err = await generate(ids[i])
       if (err) errs.push(err)
       if (i < ids.length - 1) {
-        setBulkProgress(`${i + 1} of ${ids.length} done — resting 15s before the next…`)
-        await sleep(15000)
+        setBulkProgress(`${i + 1} of ${ids.length} done — resting 3s before the next…`)
+        await sleep(3000)
       }
     }
     setBulkProgress(null); setBulkRunning(false)
