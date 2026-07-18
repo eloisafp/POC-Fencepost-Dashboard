@@ -66,9 +66,19 @@ export async function POST(req: NextRequest) {
       month_year: post.month_year || '',
     }
 
-    let result = await callClaude(prompt, JSON.stringify(payload), 1000)
+    // The model occasionally wraps the JSON in prose — retry up to 2 extra times
+    let result: any = null
+    let lastError: any = null
+    for (let attempt = 0; attempt < 3 && !result?.content; attempt++) {
+      try {
+        result = await callClaude(prompt, JSON.stringify(payload), 1000)
+      } catch (e: any) {
+        lastError = e
+        if (!/invalid JSON|empty response/i.test(e.message)) throw e
+      }
+    }
     let content: string = (result?.content || '').trim()
-    if (!content) throw new Error('AI returned no content. Try again.')
+    if (!content) throw new Error(lastError?.message || 'AI returned no content. Try again.')
 
     // Enforce the 50-word cap — one shorten retry, then hard-fail rather than publish an overlong post
     if (countWords(content) > 50) {

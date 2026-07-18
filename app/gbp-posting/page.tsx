@@ -82,7 +82,7 @@ export default function GbpPostingPage() {
   const [count, setCount] = useState(4)
   const [rows, setRows] = useState<PostRow[]>([])
   const [adding, setAdding] = useState(false)
-  const [generatingId, setGeneratingId] = useState<number | null>(null)
+  const [generatingIds, setGeneratingIds] = useState<Set<number>>(new Set())
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [copiedId, setCopiedId] = useState<number | null>(null)
@@ -156,14 +156,14 @@ export default function GbpPostingPage() {
   }
 
   async function generate(id: number) {
-    setGeneratingId(id); setError(null)
+    setGeneratingIds(s => new Set(s).add(id)); setError(null)
     try {
       const r = await postJson('/api/gbp-posting/generate', { post_id: id })
       setRows(rs => rs.map(row => (row.id === id ? { ...row, content: r.content, status: 'For Review' } : row)))
     } catch (e: any) {
       setError(`Post #${id}: ${e.message}`)
     }
-    setGeneratingId(null)
+    setGeneratingIds(s => { const n = new Set(s); n.delete(id); return n })
   }
 
   return (
@@ -300,20 +300,20 @@ export default function GbpPostingPage() {
                             </button>
                             <button
                               onClick={() => generate(row.id)}
-                              disabled={generatingId !== null}
+                              disabled={generatingIds.has(row.id)}
                               style={{ fontSize: 10, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                             >
-                              {generatingId === row.id ? 'Regenerating…' : '↺ Regenerate'}
+                              {generatingIds.has(row.id) ? 'Regenerating…' : '↺ Regenerate'}
                             </button>
                           </div>
                         </div>
                       ) : (
                         <button
                           onClick={() => generate(row.id)}
-                          disabled={generatingId !== null}
+                          disabled={generatingIds.has(row.id)}
                           className="text-[11px] font-medium px-3 h-7 rounded-md bg-zinc-900 text-white disabled:opacity-40"
                         >
-                          {generatingId === row.id ? 'Generating…' : '✨ Generate'}
+                          {generatingIds.has(row.id) ? 'Generating…' : '✨ Generate'}
                         </button>
                       )}
                     </td>
