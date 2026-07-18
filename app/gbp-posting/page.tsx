@@ -32,6 +32,7 @@ const cellInp = 'w-full border border-transparent hover:border-gray-200 focus:bo
 
 const monthYearNow = () => new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 const countWords = (s: string) => s.trim().split(/\s+/).filter(Boolean).length
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 
 async function postJson(url: string, body: any) {
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -86,6 +87,23 @@ export default function GbpPostingPage() {
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [bulkRunning, setBulkRunning] = useState(false)
+  const [bulkProgress, setBulkProgress] = useState<string | null>(null)
+  const [urlModal, setUrlModal] = useState<{ rows: PostRow[]; bulk: boolean } | null>(null)
+  const pendingBulk = useRef<number[]>([])
+
+  // Auto-fit textareas (content + related URL) to their text on every change
+  const areaRefs = useRef(new Map<string, HTMLTextAreaElement>())
+  useEffect(() => {
+    areaRefs.current.forEach(el => { el.style.height = 'auto'; el.style.height = `${el.scrollHeight + 2}px` })
+  }, [rows])
+  const bindArea = (key: string) => (el: HTMLTextAreaElement | null) => {
+    if (el) areaRefs.current.set(key, el)
+    else areaRefs.current.delete(key)
+  }
+
+  // Learn More / Buy Now point the reader somewhere — a Related URL is required
+  const needsUrl = (r: PostRow) => !r.related_url?.trim() && r.cta !== 'Call Now'
 
   async function loadRows() {
     const { data } = await supabase
@@ -155,15 +173,55 @@ export default function GbpPostingPage() {
     setTimeout(() => setCopiedId(c => (c === row.id ? null : c)), 1500)
   }
 
-  async function generate(id: number) {
-    setGeneratingIds(s => new Set(s).add(id)); setError(null)
+  async function generate(id: number): Promise<string | null> {
+    setGeneratingIds(s => new Set(s).add(id))
+    let err: string | null = null
     try {
       const r = await postJson('/api/gbp-posting/generate', { post_id: id })
       setRows(rs => rs.map(row => (row.id === id ? { ...row, content: r.content, status: 'For Review' } : row)))
     } catch (e: any) {
-      setError(`Post #${id}: ${e.message}`)
+      err = `Post #${id}: ${e.message}`
     }
     setGeneratingIds(s => { const n = new Set(s); n.delete(id); return n })
+    return err
+  }
+
+  async function generateOne(row: PostRow) {
+    if (needsUrl(row)) { setUrlModal({ rows: [row], bulk: false }); return }
+    setError(null)
+    const err = await generate(row.id)
+    if (err) setError(err)
+  }
+
+  // Sequential bulk run over rows still in "Generate" status, 15s rest between calls
+  async function runBulk(ids: number[]) {
+    if (ids.length === 0) return
+    setBulkRunning(true); setError(null)
+    const errs: string[] = []
+    for (let i = 0; i < ids.length; i++) {
+      setBulkProgress(`Generating ${i + 1} of ${ids.length}…`)
+      const err = await generate(ids[i])
+      if (err) errs.push(err)
+      if (i < ids.length - 1) {
+        setBulkProgress(`${i + 1} of ${ids.length} done — resting 15s before the next…`)
+        await sleep(15000)
+      }
+    }
+    setBulkProgress(null); setBulkRunning(false)
+    if (errs.length) setError(errs.join(' | '))
+  }
+
+  function generateAll() {
+    const targets = rows.filter(r => r.status === 'Generate')
+    if (targets.length === 0) return
+    const invalid = targets.filter(needsUrl)
+    const valid = targets.filter(r => !needsUrl(r)).map(r => r.id)
+    if (invalid.length > 0) {
+      pendingBulk.current = valid
+      setUrlModal({ rows: invalid, bulk: true })
+    } else {
+      runBulk(valid)
+    }
   }
 
   return (
@@ -200,6 +258,50 @@ export default function GbpPostingPage() {
       </div>
 
       {error && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{error}</div>}
+
+      {/* Table header bar: bulk generation */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 8 }}>
+        {bulkProgress && <span style={{ fontSize: 11, color: '#2563eb' }}>{bulkProgress}</span>}
+        <button
+          onClick={generateAll}
+          disabled={bulkRunning || rows.filter(r => r.status === 'Generate').length === 0}
+          className="text-xs px-3 h-8 rounded-md bg-zinc-900 text-white font-medium disabled:opacity-40"
+        >
+          {bulkRunning ? 'Generating all…' : `⚡ Generate All (${rows.filter(r => r.status === 'Generate').length})`}
+        </button>
+      </div>
+
+      {/* Missing Related URL reminder */}
+      {urlModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(24,24,27,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '20px 22px', width: 420, maxWidth: 'calc(100vw - 48px)', boxShadow: '0 20px 50px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: '#b45309', marginBottom: 8 }}>⚠ Related URL required</div>
+            <div style={{ fontSize: 12, color: '#52525b', lineHeight: 1.6, marginBottom: 12 }}>
+              {urlModal.bulk
+                ? <>These rows use a <b>Learn More</b> or <b>Buy Now</b> CTA but have no Related URL — the button needs a page to point to. Add a Related URL before generating them:</>
+                : <>This row uses a <b>{urlModal.rows[0]?.cta}</b> CTA but has no Related URL — the button needs a page to point to. Add a Related URL before generating the GBP Post Content.</>}
+            </div>
+            {urlModal.bulk && (
+              <ul style={{ fontSize: 12, color: '#18181b', marginBottom: 12, paddingLeft: 18 }}>
+                {urlModal.rows.map(r => <li key={r.id}>#{r.id} — {r.client_name} ({r.cta})</li>)}
+              </ul>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button onClick={() => setUrlModal(null)} className="text-xs px-3 h-8 rounded-md border border-gray-300 bg-white text-gray-700">
+                {urlModal.bulk ? 'Cancel' : 'OK — I’ll add the URL'}
+              </button>
+              {urlModal.bulk && pendingBulk.current.length > 0 && (
+                <button
+                  onClick={() => { const ids = pendingBulk.current; pendingBulk.current = []; setUrlModal(null); runBulk(ids) }}
+                  className="text-xs px-3 h-8 rounded-md bg-zinc-900 text-white font-medium"
+                >
+                  Skip these, generate {pendingBulk.current.length} valid
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Posts table */}
       <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
@@ -250,7 +352,14 @@ export default function GbpPostingPage() {
                       <input className={cellInp} value={row.month_year ?? ''} onChange={e => setRows(rs => rs.map(r => r.id === row.id ? { ...r, month_year: e.target.value } : r))} onBlur={e => updateRow(row.id, { month_year: e.target.value })} />
                     </td>
                     <td style={{ padding: '8px 10px' }}>
-                      <input className={cellInp} placeholder="https://…" value={row.related_url ?? ''} onChange={e => setRows(rs => rs.map(r => r.id === row.id ? { ...r, related_url: e.target.value } : r))} onBlur={e => updateRow(row.id, { related_url: e.target.value })} />
+                      <textarea
+                        ref={bindArea(`url-${row.id}`)}
+                        className={cellInp} rows={1} placeholder="https://…"
+                        value={row.related_url ?? ''}
+                        onChange={e => setRows(rs => rs.map(r => r.id === row.id ? { ...r, related_url: e.target.value } : r))}
+                        onBlur={e => updateRow(row.id, { related_url: e.target.value })}
+                        style={{ resize: 'none', overflow: 'hidden', wordBreak: 'break-all', lineHeight: 1.4 }}
+                      />
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <select
@@ -274,11 +383,12 @@ export default function GbpPostingPage() {
                       {row.content ? (
                         <div>
                           <textarea
-                            className={cellInp} rows={3}
+                            ref={bindArea(`content-${row.id}`)}
+                            className={cellInp} rows={1}
                             value={row.content}
                             onChange={e => setRows(rs => rs.map(r => r.id === row.id ? { ...r, content: e.target.value } : r))}
                             onBlur={e => updateRow(row.id, { content: e.target.value })}
-                            style={{ resize: 'vertical', minHeight: 54, lineHeight: 1.45 }}
+                            style={{ resize: 'none', overflow: 'hidden', lineHeight: 1.45 }}
                           />
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
                             <span style={{ fontSize: 10, color: countWords(row.content) > 50 ? '#dc2626' : '#94a3b8' }}>{countWords(row.content)}/50 words</span>
@@ -299,8 +409,8 @@ export default function GbpPostingPage() {
                               )}
                             </button>
                             <button
-                              onClick={() => generate(row.id)}
-                              disabled={generatingIds.has(row.id)}
+                              onClick={() => generateOne(row)}
+                              disabled={generatingIds.has(row.id) || bulkRunning}
                               style={{ fontSize: 10, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                             >
                               {generatingIds.has(row.id) ? 'Regenerating…' : '↺ Regenerate'}
@@ -309,8 +419,8 @@ export default function GbpPostingPage() {
                         </div>
                       ) : (
                         <button
-                          onClick={() => generate(row.id)}
-                          disabled={generatingIds.has(row.id)}
+                          onClick={() => generateOne(row)}
+                          disabled={generatingIds.has(row.id) || bulkRunning}
                           className="text-[11px] font-medium px-3 h-7 rounded-md bg-zinc-900 text-white disabled:opacity-40"
                         >
                           {generatingIds.has(row.id) ? 'Generating…' : '✨ Generate'}
