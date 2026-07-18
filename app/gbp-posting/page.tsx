@@ -8,6 +8,7 @@ type PostRow = {
   id: number
   master_client_id: number
   client_name: string
+  website_url: string | null
   status: string
   month_year: string | null
   related_url: string | null
@@ -83,11 +84,13 @@ export default function GbpPostingPage() {
   const [adding, setAdding] = useState(false)
   const [generatingId, setGeneratingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [copiedId, setCopiedId] = useState<number | null>(null)
 
   async function loadRows() {
     const { data } = await supabase
       .from('gbp_post_drafts')
-      .select('id, master_client_id, client_name, status, month_year, related_url, cta, notes, content')
+      .select('id, master_client_id, client_name, website_url, status, month_year, related_url, cta, notes, content')
       .order('created_at', { ascending: false })
       .limit(300)
     setRows((data || []) as PostRow[])
@@ -105,6 +108,7 @@ export default function GbpPostingPage() {
     const inserts = Array.from({ length: n }, () => ({
       master_client_id: client.id,
       client_name: client.client_name,
+      website_url: client.website_url,
       status: 'Generate',
       month_year: monthYearNow(),
       cta: 'Learn More',
@@ -125,6 +129,30 @@ export default function GbpPostingPage() {
     if (!window.confirm('Delete this post row? This cannot be undone.')) return
     await supabase.from('gbp_post_drafts').delete().eq('id', id)
     setRows(rs => rs.filter(r => r.id !== id))
+    setSelected(s => { const n = new Set(s); n.delete(id); return n })
+  }
+
+  async function deleteSelected() {
+    if (selected.size === 0) return
+    if (!window.confirm(`Delete ${selected.size} selected row${selected.size === 1 ? '' : 's'}? This cannot be undone.`)) return
+    await supabase.from('gbp_post_drafts').delete().in('id', [...selected])
+    setRows(rs => rs.filter(r => !selected.has(r.id)))
+    setSelected(new Set())
+  }
+
+  function toggleSelect(id: number) {
+    setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+
+  function toggleSelectAll() {
+    setSelected(s => (s.size === rows.length ? new Set() : new Set(rows.map(r => r.id))))
+  }
+
+  async function copyContent(row: PostRow) {
+    if (!row.content) return
+    await navigator.clipboard.writeText(row.content)
+    setCopiedId(row.id)
+    setTimeout(() => setCopiedId(c => (c === row.id ? null : c)), 1500)
   }
 
   async function generate(id: number) {
@@ -161,13 +189,14 @@ export default function GbpPostingPage() {
         >
           {adding ? 'Adding…' : `+ Add ${count} to table`}
         </button>
-        <button
-          onClick={() => addRows(1)}
-          disabled={!client || adding}
-          className="text-xs px-3 h-8 rounded-md border border-gray-300 bg-white text-gray-700 disabled:opacity-40"
-        >
-          + Add single row
-        </button>
+        {selected.size > 0 && (
+          <button
+            onClick={deleteSelected}
+            className="text-xs px-3 h-8 rounded-md border border-red-300 bg-red-50 text-red-600 font-medium"
+          >
+            🗑 Delete selected ({selected.size})
+          </button>
+        )}
       </div>
 
       {error && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{error}</div>}
@@ -178,23 +207,30 @@ export default function GbpPostingPage() {
           <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse', color: '#18181b', minWidth: 1080 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#71717a', textAlign: 'left' }}>
+                <th style={{ padding: '8px 6px', width: 30 }}>
+                  <input type="checkbox" checked={rows.length > 0 && selected.size === rows.length} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} />
+                </th>
                 <th style={{ padding: '8px 10px', width: 110 }}>Status</th>
-                <th style={{ padding: '8px 10px', width: 150 }}>Client</th>
-                <th style={{ padding: '8px 10px', width: 110 }}>Month Year</th>
-                <th style={{ padding: '8px 10px', width: 190 }}>Related URL</th>
-                <th style={{ padding: '8px 10px', width: 105 }}>CTA</th>
-                <th style={{ padding: '8px 10px', width: 160 }}>Additional Notes</th>
+                <th style={{ padding: '8px 10px', width: 140 }}>Client</th>
+                <th style={{ padding: '8px 10px', width: 150 }}>Website URL</th>
+                <th style={{ padding: '8px 10px', width: 105 }}>Month Year</th>
+                <th style={{ padding: '8px 10px', width: 180 }}>Related URL</th>
+                <th style={{ padding: '8px 10px', width: 100 }}>CTA</th>
+                <th style={{ padding: '8px 10px', width: 150 }}>Additional Notes</th>
                 <th style={{ padding: '8px 10px' }}>GBP Post Content</th>
                 <th style={{ padding: '8px 10px', width: 40 }}></th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan={8} style={{ padding: '20px 12px', color: '#94a3b8' }}>No posts yet — pick a client above and add rows.</td></tr>
+                <tr><td colSpan={10} style={{ padding: '20px 12px', color: '#94a3b8' }}>No posts yet — pick a client above and add rows.</td></tr>
               ) : rows.map(row => {
                 const st = STATUS_STYLE[row.status] || STATUS_STYLE['Generate']
                 return (
-                  <tr key={row.id} style={{ borderBottom: '1px solid #f1f5f9', verticalAlign: 'top' }}>
+                  <tr key={row.id} style={{ borderBottom: '1px solid #f1f5f9', verticalAlign: 'top', background: selected.has(row.id) ? '#f8fafc' : undefined }}>
+                    <td style={{ padding: '10px 6px' }}>
+                      <input type="checkbox" checked={selected.has(row.id)} onChange={() => toggleSelect(row.id)} style={{ cursor: 'pointer' }} />
+                    </td>
                     <td style={{ padding: '8px 10px' }}>
                       <select
                         value={row.status}
@@ -205,6 +241,11 @@ export default function GbpPostingPage() {
                       </select>
                     </td>
                     <td style={{ padding: '8px 10px', fontWeight: 500 }}>{row.client_name}</td>
+                    <td style={{ padding: '8px 10px' }}>
+                      {row.website_url
+                        ? <a href={row.website_url.startsWith('http') ? row.website_url : `https://${row.website_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontSize: 11, wordBreak: 'break-all' }}>{row.website_url.replace(/^https?:\/\//, '')}</a>
+                        : <span style={{ color: '#94a3b8' }}>—</span>}
+                    </td>
                     <td style={{ padding: '8px 10px' }}>
                       <input className={cellInp} value={row.month_year ?? ''} onChange={e => setRows(rs => rs.map(r => r.id === row.id ? { ...r, month_year: e.target.value } : r))} onBlur={e => updateRow(row.id, { month_year: e.target.value })} />
                     </td>
@@ -239,8 +280,24 @@ export default function GbpPostingPage() {
                             onBlur={e => updateRow(row.id, { content: e.target.value })}
                             style={{ resize: 'vertical', minHeight: 54, lineHeight: 1.45 }}
                           />
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
                             <span style={{ fontSize: 10, color: countWords(row.content) > 50 ? '#dc2626' : '#94a3b8' }}>{countWords(row.content)}/50 words</span>
+                            <button
+                              onClick={() => copyContent(row)}
+                              title="Copy post content"
+                              style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: copiedId === row.id ? '#16a34a' : '#2563eb', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                            >
+                              {copiedId === row.id ? (
+                                <>✓ Copied!</>
+                              ) : (
+                                <>
+                                  <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                  </svg>
+                                  Copy
+                                </>
+                              )}
+                            </button>
                             <button
                               onClick={() => generate(row.id)}
                               disabled={generatingId !== null}
