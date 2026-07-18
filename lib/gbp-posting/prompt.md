@@ -31,4 +31,4 @@ Read the intake form and content guidelines — the post must sound like this sp
 
 ## Output
 
-Return only valid JSON: `{ "content": "the post text" }`
+Output ONLY the post text itself — plain text. No JSON, no surrounding quotes, no preamble like "Here's the post:", no labels, no explanations. Your entire reply is published as-is.

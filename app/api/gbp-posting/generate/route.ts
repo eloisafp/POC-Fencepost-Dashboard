@@ -1,7 +1,39 @@
 import { NextRequest } from 'next/server'
 import fs from 'fs'
 import path from 'path'
-import { supabaseServer, fetchGoogleDocText, callClaude } from '../../../../lib/keyword-pipeline/server'
+import { supabaseServer, fetchGoogleDocText } from '../../../../lib/keyword-pipeline/server'
+
+// Plain-text Claude call — this route needs a single string back, and JSON-mode
+// breaks whenever the model puts literal line breaks inside the JSON string
+async function callClaudeText(systemPrompt: string, userText: string): Promise<string> {
+  if (!process.env.OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY not set in .env.local')
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'http://localhost:3000',
+      'X-Title': 'Fencepost Dashboard',
+    },
+    body: JSON.stringify({
+      model: 'anthropic/claude-sonnet-4-5',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userText },
+      ],
+      max_tokens: 500,
+    }),
+  })
+  if (!res.ok) throw new Error(`AI error: ${(await res.text()).slice(0, 300)}`)
+  const json = await res.json()
+  const raw = json.choices?.[0]?.message?.content
+  const text = (typeof raw === 'string' ? raw : Array.isArray(raw) ? raw.map((c: any) => c?.text ?? '').join('') : '')
+    .trim()
+    .replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '')  // stray code fences
+    .replace(/^["'“]|["'”]$/g, '')                          // stray surrounding quotes
+    .trim()
+  return text
+}
 
 // POST { post_id } -> { content } — generates the GBP post text for one row.
 // Reads the client's intake form + content guidelines docs, plus the related
@@ -66,24 +98,15 @@ export async function POST(req: NextRequest) {
       month_year: post.month_year || '',
     }
 
-    // The model occasionally wraps the JSON in prose — retry up to 2 extra times
-    let result: any = null
-    let lastError: any = null
-    for (let attempt = 0; attempt < 3 && !result?.content; attempt++) {
-      try {
-        result = await callClaude(prompt, JSON.stringify(payload), 1000)
-      } catch (e: any) {
-        lastError = e
-        if (!/invalid JSON|empty response/i.test(e.message)) throw e
-      }
+    let content = await callClaudeText(prompt, JSON.stringify(payload))
+    if (!content) {
+      content = await callClaudeText(prompt, JSON.stringify(payload)) // one retry on empty
+      if (!content) throw new Error('AI returned no content. Try again.')
     }
-    let content: string = (result?.content || '').trim()
-    if (!content) throw new Error(lastError?.message || 'AI returned no content. Try again.')
 
     // Enforce the 50-word cap — one shorten retry, then hard-fail rather than publish an overlong post
     if (countWords(content) > 50) {
-      result = await callClaude(prompt, JSON.stringify({ ...payload, notes: `${payload.notes}\nYOUR PREVIOUS DRAFT WAS ${countWords(content)} WORDS — TOO LONG. Rewrite it under 50 words:\n${content}` }), 1000)
-      content = (result?.content || '').trim()
+      content = await callClaudeText(prompt, JSON.stringify({ ...payload, notes: `${payload.notes}\nYOUR PREVIOUS DRAFT WAS ${countWords(content)} WORDS — TOO LONG. Rewrite it under 50 words:\n${content}` }))
       if (!content || countWords(content) > 50) throw new Error(`Generated post exceeds 50 words (${countWords(content)}). Try again.`)
     }
 
