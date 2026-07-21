@@ -246,6 +246,22 @@ export default function GbpPostingPage() {
     }
   }
 
+  function exportCsv() {
+    const headers = ['Status', 'Client', 'Website URL', 'Month Year', 'Related URL', 'CTA', 'Additional Notes', 'GBP Post Content']
+    const esc = (v: string | null | undefined) => `"${(v ?? '').replace(/"/g, '""')}"`
+    const lines = [headers.map(esc).join(',')]
+    rows.forEach(r => {
+      lines.push([r.status, r.client_name, r.website_url, r.month_year, r.related_url, r.cta, r.notes, r.content].map(esc).join(','))
+    })
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `gbp-posts-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div style={{ padding: '32px 24px', maxWidth: 1240, margin: '0 auto' }}>
       <h1 style={{ fontSize: 18, fontWeight: 600, color: '#18181b', marginBottom: 4, textAlign: 'center' }}>GBP Post Generator</h1>
@@ -281,6 +297,15 @@ export default function GbpPostingPage() {
             🗑 Delete selected ({selected.size})
           </button>
         )}
+        <button
+          onClick={exportCsv}
+          disabled={rows.length === 0}
+          title="Export the current table to a CSV file"
+          className="text-xs px-3 h-8 rounded-md border border-gray-300 bg-white text-gray-700 font-medium disabled:opacity-40"
+          style={{ marginLeft: 'auto' }}
+        >
+          ⬇ Export to CSV
+        </button>
       </div>
 
       {error && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{error}</div>}
