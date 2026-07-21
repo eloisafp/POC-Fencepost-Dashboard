@@ -70,7 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body style={{ margin: 0, fontFamily: 'Inter, system-ui, sans-serif' }}>
-        <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f5f4' }}>
+        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f5f5f4' }}>
 
           {/* Sidebar */}
           <aside style={{
