@@ -297,15 +297,6 @@ export default function GbpPostingPage() {
             🗑 Delete selected ({selected.size})
           </button>
         )}
-        <button
-          onClick={exportCsv}
-          disabled={rows.length === 0}
-          title="Export the current table to a CSV file"
-          className="text-xs px-3 h-8 rounded-md border border-gray-300 bg-white text-gray-700 font-medium disabled:opacity-40"
-          style={{ marginLeft: 'auto' }}
-        >
-          ⬇ Export to CSV
-        </button>
       </div>
 
       {error && <div style={{ fontSize: 12, color: '#dc2626', background: '#fef2f2', padding: '8px 12px', borderRadius: 6, marginBottom: 12 }}>{error}</div>}
@@ -313,6 +304,14 @@ export default function GbpPostingPage() {
       {/* Table header bar: bulk generation */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 8 }}>
         {bulkProgress && <span style={{ fontSize: 11, color: '#2563eb' }}>{bulkProgress}</span>}
+        <button
+          onClick={exportCsv}
+          disabled={rows.length === 0}
+          title="Export the current table to a CSV file"
+          className="text-xs px-3 h-8 rounded-md border border-gray-300 bg-white text-gray-700 font-medium disabled:opacity-40"
+        >
+          ⬇ Export to CSV
+        </button>
         <button
           onClick={generateAll}
           disabled={bulkRunning || rows.filter(r => r.status === 'Generate').length === 0}
