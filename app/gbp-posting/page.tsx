@@ -41,16 +41,15 @@ async function postJson(url: string, body: any) {
   return json
 }
 
-function ClientDropdown({ clients, value, onChange }: {
+function MultiClientDropdown({ clients, value, onChange }: {
   clients: MasterClient[]
-  value: MasterClient | null
-  onChange: (c: MasterClient) => void
+  value: MasterClient[]
+  onChange: (cs: MasterClient[]) => void
 }) {
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
-  useEffect(() => { setQ(value?.client_name || '') }, [value])
   useEffect(() => {
     function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
     document.addEventListener('mousedown', h)
@@ -58,16 +57,38 @@ function ClientDropdown({ clients, value, onChange }: {
   }, [])
 
   const filtered = q.trim() ? clients.filter(c => c.client_name.toLowerCase().includes(q.toLowerCase())) : clients
+  const selectedIds = new Set(value.map(c => c.id))
+
+  function toggle(c: MasterClient) {
+    onChange(selectedIds.has(c.id) ? value.filter(v => v.id !== c.id) : [...value, c])
+  }
 
   return (
-    <div ref={ref} style={{ position: 'relative', width: 260 }}>
-      <input className={inp} placeholder="Search clients..." value={q}
-        onChange={e => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} />
+    <div ref={ref} style={{ position: 'relative', width: 320 }}>
+      <div
+        onClick={() => setOpen(true)}
+        style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', minHeight: 32, border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 6px', cursor: 'text', background: '#fff' }}
+      >
+        {value.map(c => (
+          <span key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, background: '#f1f5f9', color: '#334155', borderRadius: 4, padding: '2px 6px' }}>
+            {c.client_name}
+            <button onClick={e => { e.stopPropagation(); toggle(c) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
+          </span>
+        ))}
+        <input
+          value={q}
+          onChange={e => { setQ(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+          placeholder={value.length === 0 ? 'Search clients…' : ''}
+          style={{ flex: 1, minWidth: 80, border: 'none', outline: 'none', fontSize: 12, padding: '2px' }}
+        />
+      </div>
       {open && filtered.length > 0 && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.08)', marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
           {filtered.map(c => (
-            <button key={c.id} onMouseDown={e => { e.preventDefault(); onChange(c); setOpen(false) }}
-              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: 12, color: '#334155', background: 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
+            <button key={c.id} onMouseDown={e => { e.preventDefault(); toggle(c) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: 12, color: '#334155', background: selectedIds.has(c.id) ? '#f8fafc' : 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
+              <input type="checkbox" checked={selectedIds.has(c.id)} readOnly style={{ pointerEvents: 'none' }} />
               {c.client_name}
             </button>
           ))}
@@ -79,7 +100,7 @@ function ClientDropdown({ clients, value, onChange }: {
 
 export default function GbpPostingPage() {
   const [clients, setClients] = useState<MasterClient[]>([])
-  const [client, setClient] = useState<MasterClient | null>(null)
+  const [selectedClients, setSelectedClients] = useState<MasterClient[]>([])
   const [count, setCount] = useState(4)
   const [rows, setRows] = useState<PostRow[]>([])
   const [adding, setAdding] = useState(false)
@@ -121,20 +142,21 @@ export default function GbpPostingPage() {
   }, [])
 
   async function addRows(n: number) {
-    if (!client) return
+    if (selectedClients.length === 0) return
     setAdding(true); setError(null)
-    const inserts = Array.from({ length: n }, () => ({
+    const inserts = selectedClients.flatMap(client => Array.from({ length: n }, () => ({
       master_client_id: client.id,
       client_name: client.client_name,
       website_url: client.website_url,
       status: 'Generate',
       month_year: monthYearNow(),
       cta: 'Learn More',
-    }))
+    })))
     const { error: insErr } = await supabase.from('gbp_post_drafts').insert(inserts)
     if (insErr) setError(insErr.message)
     await loadRows()
     setAdding(false)
+    setSelectedClients([])
   }
 
   // Inline edit: update state immediately, persist to DB
@@ -233,8 +255,8 @@ export default function GbpPostingPage() {
 
       {/* Add posts bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <ClientDropdown clients={clients} value={client} onChange={setClient} />
-        <span style={{ fontSize: 11, color: '#71717a' }}>posts:</span>
+        <MultiClientDropdown clients={clients} value={selectedClients} onChange={setSelectedClients} />
+        <span style={{ fontSize: 11, color: '#71717a' }}>posts per client:</span>
         <input
           type="number" min={1} max={20} value={count}
           onChange={e => setCount(Math.max(1, Math.min(20, Number(e.target.value) || 1)))}
@@ -242,10 +264,14 @@ export default function GbpPostingPage() {
         />
         <button
           onClick={() => addRows(count)}
-          disabled={!client || adding}
+          disabled={selectedClients.length === 0 || adding}
           className="text-xs px-3 h-8 rounded-md bg-zinc-900 text-white font-medium disabled:opacity-40"
         >
-          {adding ? 'Adding…' : `+ Add ${count} to table`}
+          {adding
+            ? 'Adding…'
+            : selectedClients.length > 1
+              ? `+ Add ${count} to table × ${selectedClients.length} clients`
+              : `+ Add ${count} to table`}
         </button>
         {selected.size > 0 && (
           <button
