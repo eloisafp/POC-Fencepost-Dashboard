@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     const { data: client } = await sb
       .from('master_clients')
-      .select('intake_form_link, content_guidelines_url')
+      .select('intake_form_link, content_guidelines_url, niche')
       .eq('id', post.master_client_id)
       .single()
 
@@ -89,6 +89,8 @@ export async function POST(req: NextRequest) {
     const prompt = fs.readFileSync(path.join(process.cwd(), 'lib/gbp-posting', 'prompt.md'), 'utf-8')
     const payload = {
       client_name: post.client_name,
+      post_type: post.post_type || 'General',
+      niche: client?.niche || '',
       intake_form: intakeText,
       content_guidelines: guideText,
       related_url: post.related_url || '',
