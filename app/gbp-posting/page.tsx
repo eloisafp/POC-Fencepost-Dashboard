@@ -97,6 +97,7 @@ export default function GbpPostingPage() {
   const [rows, setRows] = useState<PostRow[]>([])
   const [openClients, setOpenClients] = useState<number[]>([])   // client ids shown as cards (incl. empty added ones)
   const [selectedForAdd, setSelectedForAdd] = useState<MasterClient[]>([])
+  const [cardSearch, setCardSearch] = useState('')               // filters which client cards are shown
   const [busyClient, setBusyClient] = useState<number | null>(null)
   const [generatingIds, setGeneratingIds] = useState<Set<number>>(new Set())
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -270,6 +271,8 @@ export default function GbpPostingPage() {
   }
 
   const cardIds = openClients
+  const cardQuery = cardSearch.trim().toLowerCase()
+  const visibleCardIds = cardQuery ? cardIds.filter(cid => clientMeta(cid).client_name.toLowerCase().includes(cardQuery)) : cardIds
   const generateCount = rows.filter(r => r.status === 'Generate').length
 
   return (
@@ -281,6 +284,11 @@ export default function GbpPostingPage() {
       <div style={{ position: 'sticky', top: 0, zIndex: 30, background: '#f5f5f4', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', marginBottom: 8, flexWrap: 'wrap', borderBottom: '1px solid #e5e7eb' }}>
         <MultiClientDropdown clients={clients} value={selectedForAdd} onChange={setSelectedForAdd} />
         <button onClick={addCards} disabled={selectedForAdd.length === 0} className={btnDark}>+ Add client{selectedForAdd.length > 1 ? `s (${selectedForAdd.length})` : ''}</button>
+        <div style={{ position: 'relative' }}>
+          <input value={cardSearch} onChange={e => setCardSearch(e.target.value)} placeholder="🔍 Search shown cards…"
+            style={{ height: 32, width: 190, border: '1px solid #e5e7eb', borderRadius: 6, padding: '0 26px 0 10px', fontSize: 12, color: '#334155', outline: 'none', background: '#fff' }} />
+          {cardSearch && <button onClick={() => setCardSearch('')} title="Clear" style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 14, lineHeight: 1 }}>×</button>}
+        </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           {bulkProgress && <span style={{ fontSize: 11, color: '#2563eb' }}>{bulkProgress}</span>}
           {selected.size > 0 && <button onClick={deleteSelected} className="text-xs px-3 h-8 rounded-md border border-red-300 bg-red-50 text-red-600 font-medium">🗑 Delete selected ({selected.size})</button>}
@@ -295,7 +303,11 @@ export default function GbpPostingPage() {
         <div style={{ background: '#fff', border: '1px dashed #e2e8f0', borderRadius: 12, padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
           No clients yet — search a client above and click &quot;Add client&quot; to start their post set.
         </div>
-      ) : cardIds.map(cid => {
+      ) : visibleCardIds.length === 0 ? (
+        <div style={{ background: '#fff', border: '1px dashed #e2e8f0', borderRadius: 12, padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+          No client card matches &quot;{cardSearch}&quot;.
+        </div>
+      ) : visibleCardIds.map(cid => {
         const c = clientMeta(cid)
         // Order by week (W1→W4) so a plan reads in sequence; weekless manual
         // rows (week=null) sort after, keeping the query's newest-first order.
