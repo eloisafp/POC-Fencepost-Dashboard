@@ -277,8 +277,8 @@ export default function GbpPostingPage() {
       <h1 style={{ fontSize: 18, fontWeight: 600, color: '#18181b', marginBottom: 4, textAlign: 'center' }}>GBP Post Generator</h1>
       <p style={{ fontSize: 12, color: '#71717a', marginBottom: 20, textAlign: 'center' }}>Each client has its own set of posts. AI writes each post (max 50 words) from the client&apos;s intake form, guidelines, and post type.</p>
 
-      {/* Top bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      {/* Top bar — sticky so Generate all stays reachable while scrolling */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 30, background: '#f5f5f4', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', marginBottom: 8, flexWrap: 'wrap', borderBottom: '1px solid #e5e7eb' }}>
         <MultiClientDropdown clients={clients} value={selectedForAdd} onChange={setSelectedForAdd} />
         <button onClick={addCards} disabled={selectedForAdd.length === 0} className={btnDark}>+ Add client{selectedForAdd.length > 1 ? `s (${selectedForAdd.length})` : ''}</button>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
