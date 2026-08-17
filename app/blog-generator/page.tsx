@@ -14,6 +14,7 @@ type BlogPost = {
   keyword:     string
   blog_title:  string
   blog_month:  string | null
+  notes:       string | null
   status:      BlogStatus
   gdoc_url:    string | null
   error_msg:   string | null
@@ -139,7 +140,7 @@ export default function BlogGeneratorPage() {
   const [generating,    setGenerating]    = useState<Set<number>>(new Set())
   const [generatingAll, setGeneratingAll] = useState(false)
   const [editingId,     setEditingId]     = useState<number | null>(null)
-  const [editVals,      setEditVals]      = useState({ keyword: '', blog_title: '', blog_month: '' })
+  const [editVals,      setEditVals]      = useState({ keyword: '', blog_title: '', blog_month: '', notes: '' })
   const [copied,        setCopied]        = useState<number | null>(null)
 
   const [selectedIds,   setSelectedIds]   = useState<Set<number>>(new Set())
@@ -162,6 +163,7 @@ export default function BlogGeneratorPage() {
   const [addKw,     setAddKw]     = useState('')
   const [addTitle,  setAddTitle]  = useState('')
   const [addMonth,  setAddMonth]  = useState(currentMonth)
+  const [addNotes,  setAddNotes]  = useState('')
   const [addBusy,   setAddBusy]   = useState(false)
 
   // ── Load ──────────────────────────────────────────────────────────────────
@@ -194,10 +196,11 @@ export default function BlogGeneratorPage() {
       keyword:     addKw,
       blog_title:  addTitle,
       blog_month:  addMonth || null,
+      notes:       addNotes.trim() || null,
       status:      'pending',
     })
     if (!error) {
-      setAddClient(''); setAddKw(''); setAddTitle(''); setAddMonth(currentMonth())
+      setAddClient(''); setAddKw(''); setAddTitle(''); setAddMonth(currentMonth()); setAddNotes('')
       setShowAdd(false)
       loadPosts()
     }
@@ -223,6 +226,7 @@ export default function BlogGeneratorPage() {
               keyword:     r['keyword']      || '',
               blog_title:  r['blog_title']   || r['title']       || '',
               blog_month:  r['blog_month']   || r['month']       || currentMonth(),
+              notes:       r['notes']        || null,
               status:      'pending' as BlogStatus,
             }
           })
@@ -327,6 +331,7 @@ export default function BlogGeneratorPage() {
           keyword:     post.keyword,
           blogTitle:   post.blog_title,
           blogMonth:   post.blog_month || '',
+          notes:       post.notes || '',
           intakeFormContent,
           contentGuidelinesContent,
           internalLinks,
@@ -461,7 +466,7 @@ export default function BlogGeneratorPage() {
 
   function startEdit(post: BlogPost) {
     setEditingId(post.id)
-    setEditVals({ keyword: post.keyword, blog_title: post.blog_title, blog_month: post.blog_month || '' })
+    setEditVals({ keyword: post.keyword, blog_title: post.blog_title, blog_month: post.blog_month || '', notes: post.notes || '' })
   }
 
   async function saveEdit(id: number) {
@@ -470,8 +475,9 @@ export default function BlogGeneratorPage() {
       keyword:    editVals.keyword,
       blog_title: editVals.blog_title,
       blog_month: editVals.blog_month || null,
+      notes:      editVals.notes.trim() || null,
     }).eq('id', id)
-    setPosts(ps => ps.map(p => p.id === id ? { ...p, ...editVals, blog_month: editVals.blog_month || null } : p))
+    setPosts(ps => ps.map(p => p.id === id ? { ...p, ...editVals, blog_month: editVals.blog_month || null, notes: editVals.notes.trim() || null } : p))
     setEditingId(null)
   }
 
@@ -589,9 +595,14 @@ export default function BlogGeneratorPage() {
               <input className={inp} value={addMonth} onChange={e => setAddMonth(e.target.value)} />
             </div>
           </div>
+          <div className="mt-2.5">
+            <label className="block text-xs font-medium text-gray-500 mb-1">Notes <span className="text-gray-300 font-normal">(optional — prioritized when writing the blog)</span></label>
+            <textarea className="w-full border border-gray-200 rounded-md px-3 py-2 text-xs text-gray-800 outline-none focus:ring-1 focus:ring-gray-400 bg-white placeholder-gray-300" rows={2}
+              placeholder="e.g. Emphasize winter prep; mention our free inspection offer; avoid discussing pricing." value={addNotes} onChange={e => setAddNotes(e.target.value)} />
+          </div>
           <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-gray-100">
             <button
-              onClick={() => { setShowAdd(false); setAddClient(''); setAddKw(''); setAddTitle(''); setAddMonth(currentMonth()) }}
+              onClick={() => { setShowAdd(false); setAddClient(''); setAddKw(''); setAddTitle(''); setAddMonth(currentMonth()); setAddNotes('') }}
               className="text-xs px-3 h-8 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
               Cancel
             </button>
@@ -607,7 +618,7 @@ export default function BlogGeneratorPage() {
 
       {/* CSV hint */}
       <div className="mb-3 text-xs text-gray-400">
-        CSV columns: <span className="font-mono text-gray-500">company_name, keyword, blog_title, blog_month</span>
+        CSV columns: <span className="font-mono text-gray-500">company_name, keyword, blog_title, blog_month, notes</span> <span className="text-gray-300">(notes optional)</span>
       </div>
 
       {/* Filters + generate all */}
@@ -693,6 +704,7 @@ export default function BlogGeneratorPage() {
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-40">Keyword</th>
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium">Blog Title</th>
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-24">Blog Month</th>
+                <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-52">Notes</th>
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-24">Status</th>
                 <th className="text-left px-4 py-2.5 text-gray-400 font-medium w-52">Actions</th>
               </tr>
@@ -768,6 +780,21 @@ export default function BlogGeneratorPage() {
                       ) : (
                         <span className="cursor-text hover:bg-gray-100 rounded px-1 -mx-1 py-0.5"
                           onClick={() => startEdit(post)}>{post.blog_month || '—'}</span>
+                      )}
+                    </td>
+
+                    {/* Notes */}
+                    <td className="px-4 py-3 text-gray-500 align-top">
+                      {editingId === post.id ? (
+                        <textarea
+                          className="w-full border border-gray-200 rounded-md px-2 py-1 text-xs text-gray-800 outline-none focus:ring-1 focus:ring-gray-400 bg-white" rows={2}
+                          value={editVals.notes} placeholder="team instructions (prioritized)…"
+                          onChange={e => setEditVals(v => ({ ...v, notes: e.target.value }))}
+                          onBlur={e => { if (!e.currentTarget.closest('tr')?.contains(e.relatedTarget as Node)) saveEdit(post.id) }}
+                          onKeyDown={e => { if (e.key === 'Escape') setEditingId(null) }} />
+                      ) : (
+                        <span className="cursor-text hover:bg-gray-100 rounded px-1 -mx-1 py-0.5 block max-w-[13rem] whitespace-pre-wrap"
+                          onClick={() => startEdit(post)}>{post.notes || <span className="text-gray-300">—</span>}</span>
                       )}
                     </td>
 

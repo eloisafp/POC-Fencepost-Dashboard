@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   }
 
   const {
-    companyName, websiteUrl, niche, keyword, blogTitle, blogMonth,
+    companyName, websiteUrl, niche, keyword, blogTitle, blogMonth, notes,
     intakeFormContent, contentGuidelinesContent, internalLinks,
   }: {
     companyName: string
@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     keyword: string
     blogTitle: string
     blogMonth: string
+    notes?: string
     intakeFormContent?: string
     contentGuidelinesContent?: string
     internalLinks?: Array<{ url: string; meta_title?: string | null }>
@@ -34,12 +35,16 @@ export async function POST(req: Request) {
     internalLinksBlock,
   ].join('')
 
+  const notesBlock = notes && notes.trim()
+    ? `\n\n=== TEAM NOTES FOR THIS BLOG (HIGHEST PRIORITY) ===\nThe team gave specific instructions for THIS blog. Treat them as the top priority and build the blog around them. If a note conflicts with a default instruction below, the note wins. Only the required HTML structure and the 800-1000 word target still apply.\n${notes.trim()}\n=== END TEAM NOTES ===`
+    : ''
+
   const userPrompt = `Company: ${companyName}
 Website: ${websiteUrl || 'N/A'}
 Niche: ${niche || 'service business'}
 Keyword: ${keyword}
 Blog Title: ${blogTitle}
-Blog Month: ${blogMonth}
+Blog Month: ${blogMonth}${notesBlock}
 
 Task:
 
