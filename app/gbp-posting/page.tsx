@@ -212,6 +212,15 @@ export default function GbpPostingPage() {
     setSelected(new Set())
   }
 
+  // Wipe every client card and all their posts (whole table).
+  async function deleteAll() {
+    if (rows.length === 0 && openClients.length === 0) return
+    if (!window.confirm(`Delete ALL client cards and every GBP post (${rows.length} post${rows.length === 1 ? '' : 's'})? This cannot be undone.`)) return
+    const { error: e } = await supabase.from('gbp_post_drafts').delete().gte('id', 0)
+    if (e) { setError(e.message); return }
+    setRows([]); setOpenClients([]); setSelected(new Set())
+  }
+
   const toggleSelect = (id: number) => setSelected(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleCollapse = (id: number) => setCollapsed(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
 
@@ -292,6 +301,7 @@ export default function GbpPostingPage() {
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           {bulkProgress && <span style={{ fontSize: 11, color: '#2563eb' }}>{bulkProgress}</span>}
           {selected.size > 0 && <button onClick={deleteSelected} className="text-xs px-3 h-8 rounded-md border border-red-300 bg-red-50 text-red-600 font-medium">🗑 Delete selected ({selected.size})</button>}
+          {(rows.length > 0 || openClients.length > 0) && <button onClick={deleteAll} title="Delete all client cards and their posts" className="text-xs px-3 h-8 rounded-md border border-red-300 bg-red-50 text-red-600 font-medium">🗑 Delete all</button>}
           <button onClick={exportCsv} disabled={rows.length === 0} className={btnLight}>⬇ Export CSV</button>
           <button onClick={() => startBulk(rows)} disabled={bulkRunning || generateCount === 0} className={btnDark}>⚡ Generate all ({generateCount})</button>
         </div>
@@ -319,6 +329,11 @@ export default function GbpPostingPage() {
             generatingIds={generatingIds} selected={selected} copiedId={copiedId} bindArea={bindArea}
             onToggleCollapse={() => toggleCollapse(cid)} onAddPosts={(n) => addPosts(cid, n)} onGeneratePlan={() => generatePlan(cid)}
             onGenerateAll={() => startBulk(clientRows)} onRemove={() => removeCard(cid, clientRows)}
+            onToggleSelectAll={() => setSelected(s => {
+              const ids = clientRows.map(r => r.id)
+              const allSel = ids.length > 0 && ids.every(id => s.has(id))
+              const n = new Set(s); ids.forEach(id => allSel ? n.delete(id) : n.add(id)); return n
+            })}
             onUpdateRow={updateRow} onDeleteRow={deleteRow} onGenerateOne={generateOne} onCopy={copyContent} onToggleSelect={toggleSelect} setRows={setRows}
           />
         )
@@ -344,7 +359,7 @@ export default function GbpPostingPage() {
 function ClientCard(props: {
   client: MasterClient; rows: PostRow[]; collapsed: boolean; busy: boolean; bulkRunning: boolean
   generatingIds: Set<number>; selected: Set<number>; copiedId: number | null; bindArea: (k: string) => (el: HTMLTextAreaElement | null) => void
-  onToggleCollapse: () => void; onAddPosts: (n: number) => void; onGeneratePlan: () => void; onGenerateAll: () => void; onRemove: () => void
+  onToggleCollapse: () => void; onAddPosts: (n: number) => void; onGeneratePlan: () => void; onGenerateAll: () => void; onRemove: () => void; onToggleSelectAll: () => void
   onUpdateRow: (id: number, patch: Partial<PostRow>) => void; onDeleteRow: (id: number) => void; onGenerateOne: (r: PostRow) => void
   onCopy: (r: PostRow) => void; onToggleSelect: (id: number) => void; setRows: React.Dispatch<React.SetStateAction<PostRow[]>>
 }) {
@@ -357,6 +372,9 @@ function ClientCard(props: {
       {/* Card header: client + website + actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: collapsed ? 'none' : '1px solid #f1f5f9', flexWrap: 'wrap' }}>
         <button onClick={props.onToggleCollapse} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12 }}>{collapsed ? '▶' : '▼'}</button>
+        <input type="checkbox" title="Select all posts for this client"
+          checked={rows.length > 0 && rows.every(r => selected.has(r.id))}
+          onChange={props.onToggleSelectAll} style={{ cursor: 'pointer' }} disabled={rows.length === 0} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#18181b' }}>{c.client_name}</div>
           {c.website_url
