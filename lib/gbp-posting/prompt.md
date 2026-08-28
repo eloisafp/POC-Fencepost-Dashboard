@@ -37,6 +37,7 @@ You receive a JSON object:
 2. Localize naturally — name the city from the intake form.
 3. No hashtags. No quotation marks around the post. At most one emoji, only if it fits the brand tone.
 4. Plain text — no markdown, no bullet points, no line-break formatting tricks.
+5. Never use em dashes (—). Use a comma or semicolon instead.
 
 ## Output
 

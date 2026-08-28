@@ -31,6 +31,7 @@ async function callClaudeText(systemPrompt: string, userText: string): Promise<s
     .trim()
     .replace(/^```[a-z]*\s*/i, '').replace(/\s*```$/, '')  // stray code fences
     .replace(/^["'“]|["'”]$/g, '')                          // stray surrounding quotes
+    .replace(/\s*—\s*/g, ', ')                          // never publish em dashes — use a comma
     .trim()
   return text
 }
