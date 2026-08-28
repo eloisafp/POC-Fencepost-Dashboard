@@ -68,19 +68,27 @@ function MultiClientDropdown({ clients, value, onChange }: {
   const filtered = q.trim() ? clients.filter(c => c.client_name.toLowerCase().includes(q.toLowerCase())) : clients
   const selectedIds = new Set(value.map(c => c.id))
   const toggle = (c: MasterClient) => onChange(selectedIds.has(c.id) ? value.filter(v => v.id !== c.id) : [...value, c])
+  const allFilteredSelected = filtered.length > 0 && filtered.every(c => selectedIds.has(c.id))
+  const toggleAll = () => onChange(
+    allFilteredSelected
+      ? value.filter(v => !filtered.some(f => f.id === v.id))
+      : [...value, ...filtered.filter(f => !selectedIds.has(f.id))],
+  )
   return (
     <div ref={ref} style={{ position: 'relative', width: 320 }}>
-      <div onClick={() => setOpen(true)} style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', minHeight: 32, border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 6px', cursor: 'text', background: '#fff' }}>
-        {value.map(c => (
-          <span key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, background: '#f1f5f9', color: '#334155', borderRadius: 4, padding: '2px 6px' }}>
-            {c.client_name}
-            <button onClick={e => { e.stopPropagation(); toggle(c) }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
-          </span>
-        ))}
-        <input value={q} onChange={e => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)} placeholder={value.length === 0 ? 'Search clients…' : ''} style={{ flex: 1, minWidth: 80, border: 'none', outline: 'none', fontSize: 12, padding: '2px' }} />
+      <div onClick={() => setOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 32, border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', cursor: 'text', background: '#fff' }}>
+        <input value={q} onChange={e => { setQ(e.target.value); setOpen(true) }} onFocus={() => setOpen(true)}
+          placeholder={value.length ? `${value.length} selected — type to search…` : 'Search clients…'}
+          style={{ flex: 1, minWidth: 80, border: 'none', outline: 'none', fontSize: 12, padding: '2px' }} />
+        {value.length > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: '#0d9488', whiteSpace: 'nowrap' }}>{value.length} ✓</span>}
       </div>
       {open && filtered.length > 0 && (
         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.08)', marginTop: 4, maxHeight: 240, overflowY: 'auto' }}>
+          <button onMouseDown={e => { e.preventDefault(); toggleAll() }}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: 12, fontWeight: 600, color: '#0d9488', background: '#f8fafc', border: 'none', borderBottom: '1px solid #e2e8f0', cursor: 'pointer', position: 'sticky', top: 0 }}>
+            <input type="checkbox" checked={allFilteredSelected} readOnly style={{ pointerEvents: 'none' }} />
+            {allFilteredSelected ? 'Deselect all' : 'Select all'}
+          </button>
           {filtered.map(c => (
             <button key={c.id} onMouseDown={e => { e.preventDefault(); toggle(c) }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: 12, color: '#334155', background: selectedIds.has(c.id) ? '#f8fafc' : 'none', border: 'none', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}>
               <input type="checkbox" checked={selectedIds.has(c.id)} readOnly style={{ pointerEvents: 'none' }} />{c.client_name}
