@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-type MasterClient = { id: number; client_name: string; website_url: string | null; niche: string | null; shared_assets_link: string | null }
+type MasterClient = { id: number; client_name: string; website_url: string | null; niche: string | null; shared_assets_link: string | null; status: string | null }
 type PostRow = {
   id: number
   master_client_id: number
@@ -140,7 +140,7 @@ export default function GbpPostingPage() {
   }
 
   useEffect(() => {
-    supabase.from('master_clients').select('id, client_name, website_url, niche, shared_assets_link').order('client_name').then(({ data }) => { if (data) setClients(data as MasterClient[]) })
+    supabase.from('master_clients').select('id, client_name, website_url, niche, shared_assets_link, status').order('client_name').then(({ data }) => { if (data) setClients(data as MasterClient[]) })
     loadRows()
   }, [])
 
@@ -148,7 +148,7 @@ export default function GbpPostingPage() {
     const c = clients.find(x => x.id === id)
     if (c) return c
     const r = rows.find(x => x.master_client_id === id)
-    return { id, client_name: r?.client_name || `Client ${id}`, website_url: r?.website_url || null, niche: null, shared_assets_link: null }
+    return { id, client_name: r?.client_name || `Client ${id}`, website_url: r?.website_url || null, niche: null, shared_assets_link: null, status: null }
   }
 
   function addCards() {
@@ -299,7 +299,7 @@ export default function GbpPostingPage() {
 
       {/* Top bar — sticky so Generate all stays reachable while scrolling */}
       <div style={{ position: 'sticky', top: 0, zIndex: 30, background: '#f5f5f4', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', marginBottom: 8, flexWrap: 'wrap', borderBottom: '1px solid #e5e7eb' }}>
-        <MultiClientDropdown clients={clients} value={selectedForAdd} onChange={setSelectedForAdd} />
+        <MultiClientDropdown clients={clients.filter(c => !/archiv|inactive/i.test(c.status || ''))} value={selectedForAdd} onChange={setSelectedForAdd} />
         <button onClick={addCards} disabled={selectedForAdd.length === 0} className={btnDark}>+ Add client{selectedForAdd.length > 1 ? `s (${selectedForAdd.length})` : ''}</button>
         <div style={{ position: 'relative' }}>
           <input value={cardSearch} onChange={e => setCardSearch(e.target.value)} placeholder="🔍 Search shown cards…"
